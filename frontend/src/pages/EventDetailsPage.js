@@ -54,9 +54,16 @@ const EventDetailsPage = () => {
 
   const handleRegister = async () => {
     if (event.event_type === 'team') {
-      const validMembers = teamMembers.filter(email => email.trim() !== '');
+      const validMembers = teamMembers.filter(member => 
+        member.full_name.trim() !== '' && 
+        member.email.trim() !== '' &&
+        member.roll_number.trim() !== '' &&
+        member.department.trim() !== '' &&
+        member.mobile_number.trim() !== ''
+      );
+      
       if (validMembers.length < event.min_team_size) {
-        toast.error(`Minimum ${event.min_team_size} team members required`);
+        toast.error(`Minimum ${event.min_team_size} team members required with complete details`);
         return;
       }
       if (validMembers.length > event.max_team_size) {
@@ -69,7 +76,7 @@ const EventDetailsPage = () => {
     try {
       const payload = {
         event_id: eventId,
-        team_members: event.event_type === 'team' ? teamMembers.filter(e => e.trim()) : null
+        team_members: event.event_type === 'team' ? teamMembers.filter(m => m.email.trim()) : null
       };
 
       await axios.post(`${API_URL}/registrations`, payload, {
