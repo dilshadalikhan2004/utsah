@@ -1,0 +1,160 @@
+{
+  "identity": {
+    "persona": "E1: The Anti-AI Designer",
+    "philosophy": "Fusion over Imitation. Emotion First. Content is King.",
+    "anti_patterns": [
+      "Purple/Teal CTA defaults",
+      "Inter font for headings",
+      "Center-everything layouts",
+      "Generic full-screen gradients"
+    ]
+  },
+  "theme": {
+    "name": "Electric Night",
+    "mode": "dark",
+    "emotional_archetype": "ARCHETYPE 7: ELECTRIC & NEON",
+    "description": "A high-energy, futuristic festival vibe. Dark backgrounds with glowing neon accents to simulate a night concert or cyberpunk event."
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Unbounded, sans-serif",
+      "weights": ["700", "900"],
+      "usage": "Hero titles, Section headers, Fest names",
+      "letter_spacing": "tracking-tight"
+    },
+    "body": {
+      "font_family": "Space Grotesk, sans-serif",
+      "weights": ["300", "400", "500"],
+      "usage": "Paragraphs, UI elements, Data tables",
+      "letter_spacing": "tracking-normal"
+    },
+    "mono": {
+      "font_family": "JetBrains Mono, monospace",
+      "usage": "Code snippets, countdown timers, technical stats"
+    }
+  },
+  "colors": {
+    "background": {
+      "default": "#030712",
+      "paper": "#0f172a",
+      "subtle": "#1e293b"
+    },
+    "text": {
+      "primary": "#f9fafb",
+      "secondary": "#94a3b8",
+      "muted": "#64748b"
+    },
+    "accents": {
+      "cultural": {
+        "primary": "#d946ef",
+        "secondary": "#ec4899",
+        "glow": "0 0 20px rgba(217, 70, 239, 0.5)"
+      },
+      "sports": {
+        "primary": "#f97316",
+        "secondary": "#facc15",
+        "glow": "0 0 20px rgba(249, 115, 22, 0.5)"
+      },
+      "tech": {
+        "primary": "#06b6d4",
+        "secondary": "#22c55e",
+        "glow": "0 0 20px rgba(6, 182, 212, 0.5)"
+      }
+    },
+    "functional": {
+      "success": "#22c55e",
+      "warning": "#eab308",
+      "error": "#ef4444",
+      "info": "#3b82f6"
+    }
+  },
+  "layout_strategies": {
+    "landing_page": {
+      "grid": "MODE A: THE TETRIS GRID",
+      "hero_style": "Tracing Beam + 3D Particles",
+      "spacing": "Generous (p-12 to p-24)",
+      "alignment": "Asymmetric"
+    },
+    "dashboard": {
+      "grid": "MODE B: HIGH DENSITY GRID",
+      "style": "Glassmorphism Sidebar + Dense Tables",
+      "spacing": "Tight (p-4 to p-6)",
+      "alignment": "Strict Grid"
+    },
+    "gallery": {
+      "style": "Masonry Layout",
+      "interaction": "View Transition API + Framer Motion layoutId"
+    }
+  },
+  "components": {
+    "buttons": {
+      "style": "Sharp edges or Pill-shaped",
+      "interaction": "Scale down on click (0.95), Glow on hover",
+      "classes": "rounded-none font-bold uppercase tracking-wider transition-all duration-200"
+    },
+    "cards": {
+      "style": "Glassmorphism or Neon Border",
+      "classes": "bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-colors"
+    },
+    "inputs": {
+      "style": "Underlined or Minimalist Box",
+      "classes": "bg-transparent border-b border-white/20 focus:border-white/80 rounded-none px-0"
+    }
+  },
+  "motion": {
+    "library": "framer-motion",
+    "scroll": "lenis (MANDATORY)",
+    "transitions": {
+      "page": "opacity: 0, y: 20 -> opacity: 1, y: 0",
+      "hover": "scale: 1.02, filter: brightness(1.2)",
+      "stagger": 0.1
+    }
+  },
+  "image_urls": {
+    "hero_concert": [
+      "https://images.unsplash.com/photo-1760965824369-1a867927c1e0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwxfHxtdXNpYyUyMGZlc3RpdmFsJTIwY3Jvd2QlMjBuaWdodCUyMGxpZ2h0c3xlbnwwfHx8fDE3NjkyNzQwMTR8MA&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1760965825135-e94f4e34494b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwyfHxtdXNpYyUyMGZlc3RpdmFsJTIwY3Jvd2QlMjBuaWdodCUyMGxpZ2h0c3xlbnwwfHx8fDE3NjkyNzQwMTR8MA&ixlib=rb-4.1.0&q=85"
+    ],
+    "students": [
+      "https://images.unsplash.com/photo-1758270704464-f980b03b9633?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwxfHxjb2xsZWdlJTIwc3R1ZGVudHMlMjBsYXVnaGluZyUyMGNhbXB1c3xlbnwwfHx8fDE3NjkyNzQwMTZ8MA&ixlib=rb-4.1.0&q=85",
+      "https://images.pexels.com/photos/7683897/pexels-photo-7683897.jpeg"
+    ],
+    "sub_fests": {
+      "cultural": [
+        "https://images.pexels.com/photos/102127/pexels-photo-102127.jpeg",
+        "https://images.pexels.com/photos/1509534/pexels-photo-1509534.jpeg"
+      ],
+      "sports": [
+        "https://images.pexels.com/photos/5961761/pexels-photo-5961761.jpeg",
+        "https://images.pexels.com/photos/5961847/pexels-photo-5961847.jpeg"
+      ],
+      "tech": [
+        "https://images.unsplash.com/photo-1655393001768-d946c97d6fd1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxyb2JvdGljcyUyMHRlY2hub2xvZ3klMjBmdXR1cmlzdGljfGVufDB8fHx8MTc2OTI3Mzk5NXww&ixlib=rb-4.1.0&q=85",
+        "https://images.unsplash.com/photo-1667986292516-f27450ae75a9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwyfHxyb2JvdGljcyUyMHRlY2hub2xvZ3klMjBmdXR1cmlzdGljfGVufDB8fHx8MTc2OTI3Mzk5NXww&ixlib=rb-4.1.0&q=85"
+      ]
+    }
+  },
+  "instructions_to_main_agent": [
+    "INSTALL 'lenis' IMMEDIATELY. Standard scrolling is forbidden.",
+    "Use 'Unbounded' font for all headings. Import from Google Fonts.",
+    "Use 'Space Grotesk' for body text. Import from Google Fonts.",
+    "Implement the 'Tracing Beam' effect for the Hero section.",
+    "Use the 'Tetris Grid' (Mode A) for the Landing Page layout.",
+    "Ensure all interactive elements have 'data-testid' attributes.",
+    "Use 'sonner' for all toast notifications.",
+    "For the Gallery, use a Masonry layout with 'framer-motion' layoutId for smooth expansion.",
+    "Admin Dashboard must use 'High Density Grid' (Mode B) with glassmorphism sidebar.",
+    "Do NOT use gradients for backgrounds. Use solid dark colors with noise/grain texture overlays.",
+    "Use the provided image URLs for their respective sections. Do not use placeholders."
+  ],
+  "universal_guidelines": [
+    "Avoid 'AI slop' aesthetic (generic centered layouts, simplistic gradients).",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "Do NOT apply universal transition (e.g., transition: all).",
+    "Do NOT center align the app container.",
+    "Every interaction needs micro-animations.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Subtle grain textures and noise overlays are recommended."
+  ]
+}
