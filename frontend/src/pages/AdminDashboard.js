@@ -13,9 +13,12 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ events: 0, registrations: 0, users: 0 });
   const [events, setEvents] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
+  const [selectedEventRegistrations, setSelectedEventRegistrations] = useState(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [showNotifForm, setShowNotifForm] = useState(false);
   const [showShortlistUpload, setShowShortlistUpload] = useState(false);
+  const [showRegistrationsModal, setShowRegistrationsModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [eventForm, setEventForm] = useState({
