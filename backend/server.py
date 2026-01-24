@@ -386,9 +386,13 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
         if len(registration.team_members) < event['min_team_size'] or len(registration.team_members) > event['max_team_size']:
             raise HTTPException(status_code=400, detail=f"Team size must be between {event['min_team_size']} and {event['max_team_size']}")
         
-        # Check for duplicates
-        if len(registration.team_members) != len(set(registration.team_members)):
-            raise HTTPException(status_code=400, detail="Duplicate team members not allowed")
+        # Check for duplicate emails
+        emails = [member.email for member in registration.team_members]
+        if len(emails) != len(set(emails)):
+            raise HTTPException(status_code=400, detail="Duplicate team member emails not allowed")
+        
+        # Convert team members to dict for storage
+        team_members = [member.model_dump() for member in registration.team_members]
         
         team_members = registration.team_members
     
