@@ -207,30 +207,102 @@ const EventDetailsPage = () => {
           {event.event_type === 'team' && (
             <div className="glass p-6 rounded-none mb-8" data-testid="team-registration-form">
               <h3 className="text-xl font-bold mb-4">Team Members</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Team size: {event.min_team_size} - {event.max_team_size} members (including you)
+              <p className="text-sm text-gray-400 mb-6">
+                Team size: {event.min_team_size} - {event.max_team_size} members
               </p>
 
-              <div className="space-y-3">
-                {teamMembers.map((email, idx) => (
-                  <div key={idx} className="flex gap-2">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => updateTeamMember(idx, e.target.value)}
-                      placeholder={`Team member ${idx + 1} email`}
-                      className="flex-1 bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                      data-testid={`team-member-input-${idx}`}
-                    />
-                    {teamMembers.length > event.min_team_size && (
-                      <button
-                        onClick={() => removeTeamMember(idx)}
-                        className="px-4 py-2 glass hover:bg-red-500/20 transition-colors"
-                        data-testid={`remove-member-${idx}`}
-                      >
-                        Remove
-                      </button>
-                    )}
+              <div className="space-y-8">
+                {teamMembers.map((member, idx) => (
+                  <div key={idx} className="border border-white/10 p-4 rounded-none">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="font-bold text-lg">Team Member {idx + 1}</h4>
+                      {teamMembers.length > event.min_team_size && (
+                        <button
+                          onClick={() => removeTeamMember(idx)}
+                          className="px-4 py-2 glass hover:bg-red-500/20 transition-colors text-sm"
+                          data-testid={`remove-member-${idx}`}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Full Name *</label>
+                        <input
+                          type="text"
+                          value={member.full_name}
+                          onChange={(e) => updateTeamMember(idx, 'full_name', e.target.value)}
+                          placeholder="John Doe"
+                          className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                          data-testid={`team-member-name-${idx}`}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Email *</label>
+                        <input
+                          type="email"
+                          value={member.email}
+                          onChange={(e) => updateTeamMember(idx, 'email', e.target.value)}
+                          placeholder="john@example.com"
+                          className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                          data-testid={`team-member-email-${idx}`}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Roll Number *</label>
+                        <input
+                          type="text"
+                          value={member.roll_number}
+                          onChange={(e) => updateTeamMember(idx, 'roll_number', e.target.value)}
+                          placeholder="2026CS001"
+                          className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                          data-testid={`team-member-roll-${idx}`}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Department *</label>
+                        <input
+                          type="text"
+                          value={member.department}
+                          onChange={(e) => updateTeamMember(idx, 'department', e.target.value)}
+                          placeholder="Computer Science"
+                          className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                          data-testid={`team-member-dept-${idx}`}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Year *</label>
+                        <select
+                          value={member.year}
+                          onChange={(e) => updateTeamMember(idx, 'year', parseInt(e.target.value))}
+                          className="w-full bg-[#0f172a] border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                          data-testid={`team-member-year-${idx}`}
+                        >
+                          <option value={1}>1st Year</option>
+                          <option value={2}>2nd Year</option>
+                          <option value={3}>3rd Year</option>
+                          <option value={4}>4th Year</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Mobile Number *</label>
+                        <input
+                          type="tel"
+                          value={member.mobile_number}
+                          onChange={(e) => updateTeamMember(idx, 'mobile_number', e.target.value)}
+                          placeholder="9876543210"
+                          className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                          data-testid={`team-member-mobile-${idx}`}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -238,10 +310,10 @@ const EventDetailsPage = () => {
               {teamMembers.length < event.max_team_size && (
                 <button
                   onClick={addTeamMember}
-                  className="mt-4 px-6 py-2 glass hover:bg-white/10 transition-colors"
+                  className="mt-6 px-6 py-3 glass hover:bg-white/10 transition-colors"
                   data-testid="add-team-member-button"
                 >
-                  + Add Member
+                  + Add Team Member
                 </button>
               )}
             </div>
