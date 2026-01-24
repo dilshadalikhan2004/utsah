@@ -103,13 +103,22 @@ const MyRegistrationsPage = () => {
 
                       {reg.team_members && reg.team_members.length > 0 && (
                         <div className="mt-4" data-testid={`team-members-${reg.id}`}>
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-3">
                             <Users className="w-5 h-5 text-gray-400" />
-                            <p className="text-sm text-gray-400">Team Members:</p>
+                            <p className="text-sm text-gray-400 font-medium">Team Members:</p>
                           </div>
-                          <div className="space-y-1 ml-7">
+                          <div className="space-y-3 ml-7">
                             {reg.team_members.map((member, i) => (
-                              <p key={i} className="text-sm text-gray-300" data-testid={`member-${i}`}>{member}</p>
+                              <div key={i} className="glass p-3 rounded-none" data-testid={`member-${i}`}>
+                                <p className="text-sm font-medium text-white">{member.full_name || member.email}</p>
+                                <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-400">
+                                  <div>Roll: {member.roll_number}</div>
+                                  <div>Year: {member.year}</div>
+                                  <div>Dept: {member.department}</div>
+                                  <div>Mobile: {member.mobile_number}</div>
+                                  <div className="col-span-2">Email: {member.email}</div>
+                                </div>
+                              </div>
                             ))}
                           </div>
                         </div>
