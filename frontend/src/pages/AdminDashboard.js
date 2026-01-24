@@ -297,6 +297,7 @@ const AdminDashboard = () => {
                       <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Type</th>
                       <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Registrations</th>
                       <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -316,6 +317,15 @@ const AdminDashboard = () => {
                           }`}>
                             {event.is_active ? 'Active' : 'Inactive'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => viewEventRegistrations(event.id)}
+                            className="px-4 py-2 glass hover:bg-white/10 transition-colors text-sm"
+                            data-testid={`view-regs-${event.id}`}
+                          >
+                            View Teams
+                          </button>
                         </td>
                       </tr>
                     ))}
