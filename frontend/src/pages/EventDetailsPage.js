@@ -15,7 +15,14 @@ const EventDetailsPage = () => {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
-  const [teamMembers, setTeamMembers] = useState(['']);
+  const [teamMembers, setTeamMembers] = useState([{
+    full_name: '',
+    email: '',
+    roll_number: '',
+    department: '',
+    year: 1,
+    mobile_number: ''
+  }]);
 
   useEffect(() => {
     fetchEvent();
