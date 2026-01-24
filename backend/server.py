@@ -142,16 +142,24 @@ class EventResponse(BaseModel):
     max_events_per_student: int
     created_at: datetime
 
+class TeamMember(BaseModel):
+    full_name: str
+    email: EmailStr
+    roll_number: str
+    department: str
+    year: int
+    mobile_number: str
+
 class EventRegistration(BaseModel):
     event_id: str
-    team_members: Optional[List[EmailStr]] = None  # For team events, includes leader
+    team_members: Optional[List[TeamMember]] = None  # For team events, includes leader
 
 class RegistrationResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
     event_id: str
     student_email: EmailStr
-    team_members: Optional[List[str]] = None
+    team_members: Optional[List[Dict[str, Any]]] = None
     registered_at: datetime
     event_name: str
     sub_fest: str
