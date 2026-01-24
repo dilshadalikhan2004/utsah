@@ -154,6 +154,13 @@ const AdminDashboard = () => {
     }
   };
 
+  const viewEventRegistrations = (eventId) => {
+    const eventRegs = registrations.filter(reg => reg.event_id === eventId);
+    const event = events.find(e => e.id === eventId);
+    setSelectedEventRegistrations({ event, registrations: eventRegs });
+    setShowRegistrationsModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-[#030712]" data-testid="admin-dashboard">
       {/* Header */}
