@@ -34,7 +34,15 @@ const EventDetailsPage = () => {
       setEvent(response.data);
       
       if (response.data.event_type === 'team') {
-        setTeamMembers(Array(response.data.min_team_size).fill(''));
+        const initialMembers = Array(response.data.min_team_size).fill(null).map(() => ({
+          full_name: '',
+          email: '',
+          roll_number: '',
+          department: '',
+          year: 1,
+          mobile_number: ''
+        }));
+        setTeamMembers(initialMembers);
       }
     } catch (error) {
       toast.error('Failed to load event details');
