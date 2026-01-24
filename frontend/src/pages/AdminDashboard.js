@@ -512,6 +512,104 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Registrations Modal */}
+      {showRegistrationsModal && selectedEventRegistrations && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="registrations-modal">
+          <div className="glass p-8 rounded-none max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-3xl font-black">{selectedEventRegistrations.event.name}</h2>
+                <p className="text-gray-400 mt-2">
+                  Total Registrations: {selectedEventRegistrations.registrations.length}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRegistrationsModal(false)}
+                className="px-6 py-3 glass hover:bg-white/10"
+                data-testid="close-registrations-modal"
+              >
+                Close
+              </button>
+            </div>
+
+            {selectedEventRegistrations.registrations.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">No registrations yet</div>
+            ) : (
+              <div className="space-y-6">
+                {selectedEventRegistrations.registrations.map((reg, idx) => (
+                  <div key={reg.id} className="glass p-6 rounded-none border border-white/10">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold">Registration #{idx + 1}</h3>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Registered by: {reg.student_email}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          Date: {new Date(reg.registered_at).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Individual Event */}
+                    {!reg.team_members && (
+                      <div className="glass p-4 rounded-none">
+                        <p className="text-sm text-gray-400 mb-2">Individual Participant</p>
+                        <p className="font-medium">{reg.student_email}</p>
+                      </div>
+                    )}
+
+                    {/* Team Event */}
+                    {reg.team_members && reg.team_members.length > 0 && (
+                      <div>
+                        <p className="text-sm text-gray-400 mb-3 font-medium">
+                          Team Members ({reg.team_members.length}):
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {reg.team_members.map((member, mIdx) => (
+                            <div key={mIdx} className="glass p-4 rounded-none border border-white/5">
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-bold text-lg">{member.full_name}</h4>
+                                <span className="text-xs px-2 py-1 bg-white/10 rounded">
+                                  Member {mIdx + 1}
+                                </span>
+                              </div>
+                              <div className="space-y-1 text-sm">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <span className="text-gray-500">Roll:</span>
+                                    <span className="ml-2 text-gray-300">{member.roll_number}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Year:</span>
+                                    <span className="ml-2 text-gray-300">{member.year}</span>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <span className="text-gray-500">Dept:</span>
+                                    <span className="ml-2 text-gray-300">{member.department}</span>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <span className="text-gray-500">Mobile:</span>
+                                    <span className="ml-2 text-gray-300">{member.mobile_number}</span>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <span className="text-gray-500">Email:</span>
+                                    <span className="ml-2 text-gray-300 break-all">{member.email}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
