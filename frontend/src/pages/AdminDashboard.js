@@ -56,6 +56,7 @@ const AdminDashboard = () => {
       ]);
 
       setEvents(eventsRes.data);
+      setRegistrations(regsRes.data);
       setStats({
         events: eventsRes.data.length,
         registrations: regsRes.data.length,
