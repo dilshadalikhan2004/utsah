@@ -94,7 +94,14 @@ const EventDetailsPage = () => {
 
   const addTeamMember = () => {
     if (teamMembers.length < event.max_team_size) {
-      setTeamMembers([...teamMembers, '']);
+      setTeamMembers([...teamMembers, {
+        full_name: '',
+        email: '',
+        roll_number: '',
+        department: '',
+        year: 1,
+        mobile_number: ''
+      }]);
     }
   };
 
@@ -104,9 +111,9 @@ const EventDetailsPage = () => {
     }
   };
 
-  const updateTeamMember = (index, value) => {
+  const updateTeamMember = (index, field, value) => {
     const newMembers = [...teamMembers];
-    newMembers[index] = value;
+    newMembers[index][field] = value;
     setTeamMembers(newMembers);
   };
 
