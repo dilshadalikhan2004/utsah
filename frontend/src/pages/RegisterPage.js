@@ -29,7 +29,12 @@ const RegisterPage = () => {
       toast.success('Registration successful!');
       navigate('/student');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Registration failed');
+      toast.error(
+        error.response?.data?.detail?.[0]?.msg ||
+        error.response?.data?.detail ||
+        error.message ||
+        'Registration failed'
+      );
     } finally {
       setLoading(false);
     }
