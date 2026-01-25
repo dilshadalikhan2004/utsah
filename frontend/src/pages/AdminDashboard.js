@@ -23,6 +23,22 @@ const AdminDashboard = () => {
   const [showShortlistUpload, setShowShortlistUpload] = useState(false);
   const [showRegistrationsModal, setShowRegistrationsModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showCoordinatorManager, setShowCoordinatorManager] = useState(false);
+  const [coordinatorData, setCoordinatorData] = useState(null);
+
+  const fetchCoordinatorData = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/system/coordinators`);
+      setCoordinatorData(response.data);
+    } catch (error) {
+      toast.error('Failed to load coordinator data');
+    }
+  };
+
+  const openCoordinatorManager = () => {
+    fetchCoordinatorData();
+    setShowCoordinatorManager(true);
+  };
 
 
   const [eventForm, setEventForm] = useState({
@@ -245,6 +261,73 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleSaveCoordinators = async () => {
+    try {
+      await axios.post(`${API_URL}/system/coordinators`, coordinatorData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Coordinator data updated successfully!');
+      setShowCoordinatorManager(false);
+    } catch (error) {
+      toast.error('Failed to save coordinator data');
+    }
+  };
+
+  const addCoordinatorGroup = () => {
+    setCoordinatorData({
+      ...coordinatorData,
+      coordinators: [...coordinatorData.coordinators, { event: "New Event", faculty: [], students: [] }]
+    });
+  };
+
+  const removeCoordinatorGroup = (index) => {
+    const newCoords = [...coordinatorData.coordinators];
+    newCoords.splice(index, 1);
+    setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
+  };
+
+  const updateCoordinatorGroup = (index, field, value) => {
+    const newCoords = [...coordinatorData.coordinators];
+    newCoords[index] = { ...newCoords[index], [field]: value };
+    setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
+  };
+
+  const addFaculty = (groupIndex) => {
+    const newCoords = [...coordinatorData.coordinators];
+    newCoords[groupIndex].faculty.push({ name: "", dept: "", phone: "" });
+    setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
+  };
+
+  const removeFaculty = (groupIndex, facIndex) => {
+    const newCoords = [...coordinatorData.coordinators];
+    newCoords[groupIndex].faculty.splice(facIndex, 1);
+    setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
+  };
+
+  const updateFaculty = (groupIndex, facIndex, field, value) => {
+    const newCoords = [...coordinatorData.coordinators];
+    newCoords[groupIndex].faculty[facIndex][field] = value;
+    setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
+  };
+
+  const addStudent = (groupIndex) => {
+    const newCoords = [...coordinatorData.coordinators];
+    newCoords[groupIndex].students.push({ name: "", year: "", phone: "" });
+    setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
+  };
+
+  const removeStudent = (groupIndex, stuIndex) => {
+    const newCoords = [...coordinatorData.coordinators];
+    newCoords[groupIndex].students.splice(stuIndex, 1);
+    setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
+  };
+
+  const updateStudent = (groupIndex, stuIndex, field, value) => {
+    const newCoords = [...coordinatorData.coordinators];
+    newCoords[groupIndex].students[stuIndex][field] = value;
+    setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
+  };
+
   const viewEventRegistrations = (eventId) => {
     const eventRegs = registrations.filter(reg => reg.event_id === eventId);
     const event = events.find(e => e.id === eventId);
@@ -364,6 +447,16 @@ const AdminDashboard = () => {
               <Download className="w-8 h-8 text-gray-400 mb-3 group-hover:scale-110 transition-transform" />
               <h3 className="text-lg font-bold mb-2">Export Data</h3>
               <p className="text-gray-400 text-sm">Download registrations</p>
+            </button>
+
+            <button
+              onClick={openCoordinatorManager}
+              className="glass p-6 rounded-none text-left hover:bg-white/5 transition-colors group"
+              data-testid="manage-coordinators-button"
+            >
+              <Settings className="w-8 h-8 text-yellow-400 mb-3 group-hover:scale-110 transition-transform" />
+              <h3 className="text-lg font-bold mb-2">Manage Coordinators</h3>
+              <p className="text-gray-400 text-sm">Edit contact details</p>
             </button>
 
             <button
@@ -773,6 +866,69 @@ const AdminDashboard = () => {
       )}
 
 
+      {/* Coordinator Manager Modal */}
+      {showCoordinatorManager && coordinatorData && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="coordinator-manager-modal">
+          <div className="glass p-8 rounded-none max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-3xl font-black mb-6">Manage Coordinators</h2>
+
+            <div className="space-y-6">
+              {coordinatorData.coordinators.map((group, gIdx) => (
+                <div key={gIdx} className="glass p-6 border border-white/20">
+                  <div className="flex justify-between items-center mb-4">
+                    <input
+                      type="text"
+                      value={group.event}
+                      onChange={(e) => updateCoordinatorGroup(gIdx, 'event', e.target.value)}
+                      className="text-xl font-bold bg-transparent border-b border-transparent focus:border-white outline-none w-1/2 p-2"
+                      placeholder="Event Name"
+                    />
+                    <button onClick={() => removeCoordinatorGroup(gIdx)} className="text-red-400 text-sm hover:text-red-300">Remove Group</button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Faculty */}
+                    <div>
+                      <h4 className="font-bold text-lg mb-2 text-[#d946ef]">Faculty</h4>
+                      {group.faculty.map((fac, fIdx) => (
+                        <div key={fIdx} className="flex gap-2 mb-2 items-center">
+                          <input type="text" placeholder="Name" className="bg-white/5 p-2 w-1/3 text-sm focus:outline-none focus:bg-white/10" value={fac.name} onChange={(e) => updateFaculty(gIdx, fIdx, 'name', e.target.value)} />
+                          <input type="text" placeholder="Dept" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={fac.dept} onChange={(e) => updateFaculty(gIdx, fIdx, 'dept', e.target.value)} />
+                          <input type="text" placeholder="Phone" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={fac.phone} onChange={(e) => updateFaculty(gIdx, fIdx, 'phone', e.target.value)} />
+                          <button onClick={() => removeFaculty(gIdx, fIdx)} className="text-red-400 hover:text-red-300 px-2">×</button>
+                        </div>
+                      ))}
+                      <button onClick={() => addFaculty(gIdx)} className="text-sm text-[#d946ef] mt-2 hover:text-[#ec4899]">+ Add Faculty</button>
+                    </div>
+
+                    {/* Students */}
+                    <div>
+                      <h4 className="font-bold text-lg mb-2 text-[#06b6d4]">Students</h4>
+                      {group.students.map((stu, sIdx) => (
+                        <div key={sIdx} className="flex gap-2 mb-2 items-center">
+                          <input type="text" placeholder="Name" className="bg-white/5 p-2 w-1/3 text-sm focus:outline-none focus:bg-white/10" value={stu.name} onChange={(e) => updateStudent(gIdx, sIdx, 'name', e.target.value)} />
+                          <input type="text" placeholder="Year" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={stu.year} onChange={(e) => updateStudent(gIdx, sIdx, 'year', e.target.value)} />
+                          <input type="text" placeholder="Phone" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={stu.phone} onChange={(e) => updateStudent(gIdx, sIdx, 'phone', e.target.value)} />
+                          <button onClick={() => removeStudent(gIdx, sIdx)} className="text-red-400 hover:text-red-300 px-2">×</button>
+                        </div>
+                      ))}
+                      <button onClick={() => addStudent(gIdx)} className="text-sm text-[#06b6d4] mt-2 hover:text-[#22d3ee]">+ Add Student</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-between items-center pt-6 border-t border-white/10">
+              <button onClick={addCoordinatorGroup} className="px-4 py-2 border border-white/20 hover:bg-white/10 transition-colors pointer-events-auto">+ Add Event Group</button>
+              <div className="flex gap-4">
+                <button onClick={() => setShowCoordinatorManager(false)} className="px-6 py-3 glass hover:bg-white/10 transition-colors">Cancel</button>
+                <button onClick={handleSaveCoordinators} className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider transition-colors">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
