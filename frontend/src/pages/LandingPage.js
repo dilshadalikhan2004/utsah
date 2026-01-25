@@ -1,10 +1,11 @@
 import { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Calendar, Users, Trophy, ArrowRight, Play, Music, Cpu, Medal, Instagram, Facebook, Twitter, Mail } from 'lucide-react';
+import { Sparkles, Calendar, Users, Trophy, ArrowRight, Play, Music, Cpu, Medal, Instagram, MessageCircle, Mail, Code, Crown, X } from 'lucide-react';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const [showCredits, setShowCredits] = useState(false);
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -26,13 +27,36 @@ const LandingPage = () => {
     mouseY.set(yPosition);
   }
 
+  const teamMembers = [
+    {
+      name: "Dilshad Ali Khan",
+      role: "Head Coordinator & Full-Stack Developer",
+      designation: "Final Year B.Tech, CSE (AI)",
+      image: "/dilshad.jpg"
+    },
+    {
+      name: "Ashwini Kr. Khatua",
+      role: "Head Coordinator & Full-Stack Developer ",
+      designation: "Final Year B.Tech, CSE (AI)",
+      image: "/ashwini.jpg"
+    }
+  ];
+
   return (
     <div ref={containerRef} className="min-h-screen bg-[#030712] text-white selection:bg-[#d946ef] selection:text-white overflow-hidden" onMouseMove={handleMouseMove}>
 
       {/* Navbar Overlay */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center bg-black/50 backdrop-blur-md border-b border-white/5">
         <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#06b6d4]">UTSAH</div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
+          <button
+            onClick={() => setShowCredits(true)}
+            className="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+          >
+            <Code className="w-4 h-4" />
+            <span>Credits</span>
+          </button>
+          <div className="w-px h-6 bg-white/10 hidden md:block"></div>
           <button onClick={() => navigate('/login')} className="px-4 py-2 text-sm font-bold uppercase tracking-wider hover:text-[#d946ef] transition-colors">Login</button>
           <button onClick={() => navigate('/register')} className="px-6 py-2 bg-[#d946ef] hover:bg-[#c026d3] text-white text-sm font-bold uppercase tracking-wider transition-colors clip-button">Register</button>
         </div>
@@ -40,6 +64,7 @@ const LandingPage = () => {
 
       {/* HERO SECTION */}
       <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* ... existing hero code ... */}
         {/* Animated Background Grid */}
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-150 mix-blend-overlay pointer-events-none"></div>
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[length:50px_50px] pointer-events-none" />
@@ -71,6 +96,7 @@ const LandingPage = () => {
             <img src="/logo.png" alt="UTSAH Logo" className="w-40 md:w-80 mx-auto drop-shadow-[0_0_50px_rgba(217,70,239,0.5)]" />
           </motion.div>
 
+          {/* ... */}
           <h1 className="text-7xl md:text-9xl font-black tracking-tighter mb-2 -mt-6 leading-none">
             <motion.span
               initial={{ opacity: 0, y: 100 }}
@@ -122,6 +148,49 @@ const LandingPage = () => {
         </div>
       </div>
 
+      {/* Credits Modal */}
+      {showCredits && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass p-8 max-w-2xl w-full relative border border-white/10"
+          >
+            <button
+              onClick={() => setShowCredits(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h2 className="text-3xl font-black mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#06b6d4]">
+              BEHIND THE SCENES
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              {teamMembers.map((member, i) => (
+                <div key={i} className="glass p-6 border-transparent hover:border-white/20 transition-colors flex flex-col items-center text-center">
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    className="w-24 h-24 rounded-full mb-4 border-2 border-[#d946ef]"
+                  />
+                  <h3 className="text-xl font-bold mb-1">{member.name}</h3>
+                  <p className="text-sm text-[#06b6d4] font-medium uppercase tracking-wide">{member.role}</p>
+                  <p className="text-xs text-gray-400 mt-1 tracking-wide">
+                    {member.designation}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 text-center text-gray-500 text-sm">
+              © 2026 UTSAH Team. Crafted with  ❤
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* TICKER TAPE */}
       <div className="bg-[#d946ef] py-4 rotate-1 scale-110 overflow-hidden shadow-[0_0_50px_rgba(217,70,239,0.5)] z-20 relative my-12">
         <motion.div
@@ -161,7 +230,7 @@ const LandingPage = () => {
               PASSION
             </motion.h2>
             <p className="text-xl text-gray-400 mb-8 leading-relaxed">
-              Experience 72 hours of non-stop energy, creativity, and competition.
+              Experience <span className="font-bold italic text-white">120 hours</span> of non-stop energy, creativity, and competition.
               UTSAH 2026 brings together the brightest minds and the most talented souls
               for an extravaganza unlike any other.
             </p>
@@ -244,10 +313,9 @@ const LandingPage = () => {
             <p className="text-gray-500 mt-2">GITA Autonomous College</p>
           </div>
           <div className="flex gap-6">
-            <SocialLink icon={Instagram} />
-            <SocialLink icon={Facebook} />
-            <SocialLink icon={Twitter} />
-            <SocialLink icon={Mail} />
+            <SocialLink icon={Instagram} href="https://www.instagram.com/utsah_gita?igsh=MXcweHNldWhmYXNvZQ==" />
+            <SocialLink icon={WhatsAppIcon} href="https://chat.whatsapp.com/JozxBjfWWw0BIgYod2PRWL" />
+            <SocialLink icon={Mail} href="mailto:utsahgita.official@gmail.com" />
           </div>
           <div className="text-gray-600 text-sm">
             &copy; 2026 Utsah Team. All rights reserved.
@@ -311,8 +379,23 @@ const FestCard = ({ title, subtitle, desc, color, icon: Icon, img, onClick, fit 
   </motion.div>
 );
 
-const SocialLink = ({ icon: Icon }) => (
-  <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-white hover:text-black transition-all">
+const WhatsAppIcon = ({ className }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
+    <path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" />
+  </svg>
+);
+
+const SocialLink = ({ icon: Icon, href }) => (
+  <a href={href} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-white hover:text-black transition-all">
     <Icon className="w-5 h-5" />
   </a>
 );
