@@ -912,6 +912,12 @@ async def get_coordinator_data():
         await db.system.insert_one(default_data)
         return SystemData(**default_data)
     
+    # Force update if URL is outdated
+    if data and "utsah.in" in data["rules"][0]:
+        data["rules"][0] = "REGISTER ONLY THROUGH THE WEBSITE 'UTSAH2026' (utsahfest.in)."
+        await db.system.replace_one({"type": "coordinator_data"}, data)
+        return SystemData(**data)
+
     return SystemData(**data)
 
 @api_router.post("/system/coordinators", response_model=SystemData)
