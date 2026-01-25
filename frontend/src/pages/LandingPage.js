@@ -1,10 +1,12 @@
-import { useRef, useState, useEffect } from 'react';
-import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
+import { useRef, useState } from 'react';
+import { motion, useScroll, useTransform, useMotionValue, useMotionTemplate } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Calendar, Users, Trophy, ArrowRight, Play, Music, Cpu, Medal, Instagram, MessageCircle, Mail, Code, Crown, X } from 'lucide-react';
+import { Sparkles, Calendar, Users, Trophy, ArrowRight, Play, Music, Cpu, Medal, Instagram, MessageCircle, Mail, Code, Crown, X, LogOut, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [showCredits, setShowCredits] = useState(false);
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -57,14 +59,39 @@ const LandingPage = () => {
             <span>Credits</span>
           </button>
           <div className="w-px h-6 bg-white/10 hidden md:block"></div>
-          <button onClick={() => navigate('/login')} className="px-4 py-2 text-sm font-bold uppercase tracking-wider hover:text-[#d946ef] transition-colors">Login</button>
-          <button onClick={() => navigate('/register')} className="px-6 py-2 bg-[#d946ef] hover:bg-[#c026d3] text-white text-sm font-bold uppercase tracking-wider transition-colors clip-button">Register</button>
+
+          {user ? (
+            <>
+              <div className="hidden md:block text-right mr-2">
+                <p className="text-xs text-gray-400">Welcome,</p>
+                <p className="text-sm font-bold text-[#d946ef] max-w-[150px] truncate">{user.full_name}</p>
+              </div>
+              <button
+                onClick={() => navigate('/student')}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-bold uppercase tracking-wider transition-colors rounded-none"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </button>
+              <button
+                onClick={() => { logout(); navigate('/'); }}
+                className="px-3 py-2 text-gray-400 hover:text-red-500 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => navigate('/login')} className="px-4 py-2 text-sm font-bold uppercase tracking-wider hover:text-[#d946ef] transition-colors">Login</button>
+              <button onClick={() => navigate('/register')} className="px-6 py-2 bg-[#d946ef] hover:bg-[#c026d3] text-white text-sm font-bold uppercase tracking-wider transition-colors clip-button">Register</button>
+            </>
+          )}
         </div>
       </nav>
 
       {/* HERO SECTION */}
       <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* ... existing hero code ... */}
         {/* Animated Background Grid */}
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-150 mix-blend-overlay pointer-events-none"></div>
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[length:50px_50px] pointer-events-none" />
@@ -96,7 +123,6 @@ const LandingPage = () => {
             <img src="/logo.png" alt="UTSAH Logo" className="w-40 md:w-80 mx-auto drop-shadow-[0_0_50px_rgba(217,70,239,0.5)]" />
           </motion.div>
 
-          {/* ... */}
           <h1 className="text-7xl md:text-9xl font-black tracking-tighter mb-2 -mt-6 leading-none">
             <motion.span
               initial={{ opacity: 0, y: 100 }}
@@ -139,57 +165,54 @@ const LandingPage = () => {
           </motion.div>
         </motion.div>
 
-        {/* Floating Icons Background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <FloatingElement icon={Music} color="#d946ef" x="10%" y="20%" delay={0} />
-          <FloatingElement icon={Cpu} color="#06b6d4" x="85%" y="15%" delay={2} />
-          <FloatingElement icon={Medal} color="#f97316" x="20%" y="80%" delay={4} />
-          <FloatingElement icon={Trophy} color="#22c55e" x="80%" y="75%" delay={6} />
-        </div>
+        <FloatingElement icon={Trophy} color="#22c55e" x="80%" y="75%" delay={6} />
       </div>
 
+
       {/* Credits Modal */}
-      {showCredits && (
-        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass p-8 max-w-2xl w-full relative border border-white/10"
-          >
-            <button
-              onClick={() => setShowCredits(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+      {
+        showCredits && (
+          <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass p-8 max-w-2xl w-full relative border border-white/10"
             >
-              <X className="w-6 h-6" />
-            </button>
+              <button
+                onClick={() => setShowCredits(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
 
-            <h2 className="text-3xl font-black mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#06b6d4]">
-              BEHIND THE SCENES
-            </h2>
+              <h2 className="text-3xl font-black mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#06b6d4]">
+                BEHIND THE SCENES
+              </h2>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              {teamMembers.map((member, i) => (
-                <div key={i} className="glass p-6 border-transparent hover:border-white/20 transition-colors flex flex-col items-center text-center">
-                  <img
-                    src={member.image}
-                    alt={member.name}
-                    className="w-24 h-24 rounded-full mb-4 border-2 border-[#d946ef]"
-                  />
-                  <h3 className="text-xl font-bold mb-1">{member.name}</h3>
-                  <p className="text-sm text-[#06b6d4] font-medium uppercase tracking-wide">{member.role}</p>
-                  <p className="text-xs text-gray-400 mt-1 tracking-wide">
-                    {member.designation}
-                  </p>
-                </div>
-              ))}
-            </div>
+              <div className="grid md:grid-cols-2 gap-8">
+                {teamMembers.map((member, i) => (
+                  <div key={i} className="glass p-6 border-transparent hover:border-white/20 transition-colors flex flex-col items-center text-center">
+                    <img
+                      src={member.image}
+                      alt={member.name}
+                      className="w-24 h-24 rounded-full mb-4 border-2 border-[#d946ef]"
+                    />
+                    <h3 className="text-xl font-bold mb-1">{member.name}</h3>
+                    <p className="text-sm text-[#06b6d4] font-medium uppercase tracking-wide">{member.role}</p>
+                    <p className="text-xs text-gray-400 mt-1 tracking-wide">
+                      {member.designation}
+                    </p>
+                  </div>
+                ))}
+              </div>
 
-            <div className="mt-8 text-center text-gray-500 text-sm">
-              © 2026 UTSAH Team. Crafted with  ❤
-            </div>
-          </motion.div>
-        </div>
-      )}
+              <div className="mt-8 text-center text-gray-500 text-sm">
+                © 2026 UTSAH Team. Crafted with  ❤
+              </div>
+            </motion.div>
+          </div>
+        )
+      }
 
       {/* TICKER TAPE */}
       <div className="bg-[#d946ef] py-4 rotate-1 scale-110 overflow-hidden shadow-[0_0_50px_rgba(217,70,239,0.5)] z-20 relative my-12">
@@ -322,7 +345,7 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
-    </div>
+    </div >
   );
 };
 
