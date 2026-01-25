@@ -32,13 +32,13 @@ const LandingPage = () => {
       name: "Dilshad Ali Khan",
       role: "Head Coordinator & Full-Stack Developer",
       designation: "Final Year B.Tech, CSE (AI)",
-      image: "/dilshad.jpg"
+      image: process.env.PUBLIC_URL + "/dilshad.jpg"
     },
     {
       name: "Ashwini Kr. Khatua",
       role: "Head Coordinator & Full-Stack Developer ",
       designation: "Final Year B.Tech, CSE (AI)",
-      image: "/ashwini.jpg"
+      image: process.env.PUBLIC_URL + "/ashwini.jpg"
     }
   ];
 
@@ -47,7 +47,7 @@ const LandingPage = () => {
 
       {/* Navbar Overlay */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center bg-black/50 backdrop-blur-md border-b border-white/5">
-        <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#06b6d4]">UTSAH</div>
+        <div onClick={() => navigate('/')} className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#06b6d4] cursor-pointer hover:opacity-80 transition-opacity">UTSAH</div>
         <div className="flex gap-4 items-center">
           <button
             onClick={() => setShowCredits(true)}
