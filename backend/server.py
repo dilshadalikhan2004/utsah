@@ -54,7 +54,8 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    # allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origin_regex="https?://.*", # Allow all http/https origins safely
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -792,7 +793,7 @@ async def get_coordinator_data():
         default_data = {
             "type": "coordinator_data",
             "rules": [
-                "REGISTER ONLY THROUGH THE WEBSITE 'UTSAH2026' (utsah.in).",
+                "REGISTER ONLY THROUGH THE WEBSITE 'UTSAH2026' (utsahfest.in).",
                 "Registration opens FROM 24 JAN 2026 from 7pm to 27 JAN 2026 till 10 am (*No on spot registration allowed).",
                 "One student can REGISTER in maximum two events out of the followings.",
                 "Anyone not participating in the audition won't be allowed to participate in the events.",
