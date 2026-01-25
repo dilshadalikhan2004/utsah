@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { ArrowLeft, User, Mail, Lock, Phone, Hash, Building, GraduationCap } from 'lucide-react';
+import { ArrowLeft, User, Mail, Lock, Phone, Hash, Building, GraduationCap, Eye, EyeOff } from 'lucide-react';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ const RegisterPage = () => {
     year: 1,
     mobile_number: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -95,14 +96,22 @@ const RegisterPage = () => {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full bg-transparent border-b border-white/20 focus:border-white/80 pl-12 pr-4 py-3 text-white"
+                      className="w-full bg-transparent border-b border-white/20 focus:border-white/80 pl-12 pr-12 py-3 text-white"
                       placeholder="••••••••"
                       required
                       data-testid="password-input"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                      data-testid="toggle-password-visibility"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
                   </div>
                 </div>
 

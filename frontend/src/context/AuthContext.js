@@ -12,21 +12,24 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (token) {
-      fetchUser();
+      fetchUser(token);
     } else {
       setLoading(false);
     }
   }, [token]);
 
-  const fetchUser = async () => {
+  const fetchUser = async (authToken) => {
     try {
       const response = await axios.get(`${API_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${authToken}` }
       });
       setUser(response.data);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      logout();
+      // Only logout if the token is invalid (401)
+      if (error.response && error.response.status === 401) {
+        logout();
+      }
     } finally {
       setLoading(false);
     }
@@ -63,7 +66,8 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!user,
         login,
         register,
-        logout
+        logout,
+        refreshUser: () => fetchUser(token)
       }}
     >
       {children}
@@ -74,3 +78,5 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
+console.log("API_URL =", API_URL);

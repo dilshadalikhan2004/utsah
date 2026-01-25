@@ -32,7 +32,7 @@ const EventDetailsPage = () => {
     try {
       const response = await axios.get(`${API_URL}/events/${eventId}`);
       setEvent(response.data);
-      
+
       if (response.data.event_type === 'team') {
         const initialMembers = Array(response.data.min_team_size).fill(null).map(() => ({
           full_name: '',
@@ -54,14 +54,14 @@ const EventDetailsPage = () => {
 
   const handleRegister = async () => {
     if (event.event_type === 'team') {
-      const validMembers = teamMembers.filter(member => 
-        member.full_name.trim() !== '' && 
+      const validMembers = teamMembers.filter(member =>
+        member.full_name.trim() !== '' &&
         member.email.trim() !== '' &&
         member.roll_number.trim() !== '' &&
         member.department.trim() !== '' &&
         member.mobile_number.trim() !== ''
       );
-      
+
       if (validMembers.length < event.min_team_size) {
         toast.error(`Minimum ${event.min_team_size} team members required with complete details`);
         return;
@@ -165,32 +165,10 @@ const EventDetailsPage = () => {
           <p className="text-gray-300 mb-8" data-testid="event-description">{event.description}</p>
 
           {/* Event Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="glass p-6 rounded-none">
-              <MapPin className="w-6 h-6 mb-3" style={{ color: getSubFestColor() }} />
-              <p className="text-sm text-gray-500 mb-1">Venue</p>
-              <p className="text-lg font-medium" data-testid="event-venue">{event.venue}</p>
-            </div>
-
-            <div className="glass p-6 rounded-none">
-              <Clock className="w-6 h-6 mb-3" style={{ color: getSubFestColor() }} />
-              <p className="text-sm text-gray-500 mb-1">Timing</p>
-              <p className="text-lg font-medium" data-testid="event-timing">{event.timing}</p>
-            </div>
-
-            <div className="glass p-6 rounded-none">
-              <Users className="w-6 h-6 mb-3" style={{ color: getSubFestColor() }} />
-              <p className="text-sm text-gray-500 mb-1">Event Type</p>
-              <p className="text-lg font-medium capitalize" data-testid="event-type">{event.event_type}</p>
-            </div>
-
-            <div className="glass p-6 rounded-none">
-              <UserPlus className="w-6 h-6 mb-3" style={{ color: getSubFestColor() }} />
-              <p className="text-sm text-gray-500 mb-1">Capacity</p>
-              <p className="text-lg font-medium" data-testid="event-capacity">
-                {event.registered_count} / {event.capacity}
-              </p>
-            </div>
+          <div className="glass p-6 rounded-none">
+            <Users className="w-6 h-6 mb-3" style={{ color: getSubFestColor() }} />
+            <p className="text-sm text-gray-500 mb-1">Event Type</p>
+            <p className="text-lg font-medium capitalize" data-testid="event-type">{event.event_type}</p>
           </div>
 
           {/* Coordinators */}
@@ -226,7 +204,7 @@ const EventDetailsPage = () => {
                         </button>
                       )}
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Full Name *</label>
@@ -239,7 +217,7 @@ const EventDetailsPage = () => {
                           data-testid={`team-member-name-${idx}`}
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Email *</label>
                         <input
@@ -251,7 +229,7 @@ const EventDetailsPage = () => {
                           data-testid={`team-member-email-${idx}`}
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Roll Number *</label>
                         <input
@@ -263,7 +241,7 @@ const EventDetailsPage = () => {
                           data-testid={`team-member-roll-${idx}`}
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Department *</label>
                         <input
@@ -275,7 +253,7 @@ const EventDetailsPage = () => {
                           data-testid={`team-member-dept-${idx}`}
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Year *</label>
                         <select
@@ -290,7 +268,7 @@ const EventDetailsPage = () => {
                           <option value={4}>4th Year</option>
                         </select>
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Mobile Number *</label>
                         <input
@@ -320,17 +298,27 @@ const EventDetailsPage = () => {
           )}
 
           {/* Registration Button */}
-          <button
-            onClick={handleRegister}
-            disabled={registering || event.registered_count >= event.capacity}
-            className="w-full py-4 font-bold uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: event.registered_count >= event.capacity ? '#666' : getSubFestColor()
-            }}
-            data-testid="register-button"
-          >
-            {registering ? 'Registering...' : event.registered_count >= event.capacity ? 'Event Full' : 'Register Now'}
-          </button>
+          {/* Registration Button */}
+          {(!event.sub_fest.includes('ANWESH') && !event.sub_fest.includes('AHWAAN')) ? (
+            <button
+              onClick={handleRegister}
+              disabled={registering || event.registered_count >= event.capacity}
+              className="w-full py-4 font-bold uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: event.registered_count >= event.capacity ? '#666' : getSubFestColor()
+              }}
+              data-testid="register-button"
+            >
+              {registering ? 'Registering...' : event.registered_count >= event.capacity ? 'Event Full' : 'Register Now'}
+            </button>
+          ) : (
+            <button
+              disabled
+              className="w-full py-4 font-bold uppercase tracking-wider transition-colors opacity-50 cursor-not-allowed bg-gray-600"
+            >
+              Registrations Opening Soon
+            </button>
+          )}
         </motion.div>
       </div>
     </div>

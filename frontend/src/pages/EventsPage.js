@@ -108,11 +108,10 @@ const EventsPage = () => {
                 <button
                   key={fest.name}
                   onClick={() => setSelectedSubFest(fest.name)}
-                  className={`px-6 py-3 font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
-                    selectedSubFest === fest.name
+                  className={`px-6 py-3 font-bold uppercase tracking-wider whitespace-nowrap transition-all ${selectedSubFest === fest.name
                       ? 'bg-white/20 border-2'
                       : 'glass border border-white/10 hover:bg-white/5'
-                  }`}
+                    }`}
                   style={{
                     borderColor: selectedSubFest === fest.name ? fest.color : undefined
                   }}
@@ -145,9 +144,9 @@ const EventsPage = () => {
                     className="w-16 h-1 mb-4"
                     style={{ backgroundColor: getSubFestColor(event.sub_fest) }}
                   />
-                  
+
                   <h3 className="text-2xl font-bold mb-2">{event.name}</h3>
-                  
+
                   <p className="text-sm text-gray-500 mb-3 uppercase tracking-wider">
                     {event.sub_fest.split('-')[1]}
                   </p>
@@ -158,19 +157,6 @@ const EventsPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-500">Type</span>
                       <span className="text-white capitalize">{event.event_type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Venue</span>
-                      <span className="text-white">{event.venue}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Capacity</span>
-                      <span
-                        className="font-bold"
-                        style={{ color: getSubFestColor(event.sub_fest) }}
-                      >
-                        {event.registered_count}/{event.capacity}
-                      </span>
                     </div>
                   </div>
 

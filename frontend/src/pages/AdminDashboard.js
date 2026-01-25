@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { LogOut, Plus, Upload, Download, Bell, Calendar, Users, Trophy } from 'lucide-react';
+import { LogOut, Plus, Upload, Download, Bell, Calendar, Users, Trophy, Pencil, Trash, Settings, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -14,12 +15,15 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({ events: 0, registrations: 0, users: 0 });
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [selectedEventRegistrations, setSelectedEventRegistrations] = useState(null);
   const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEventId, setEditingEventId] = useState(null);
   const [showNotifForm, setShowNotifForm] = useState(false);
   const [showShortlistUpload, setShowShortlistUpload] = useState(false);
   const [showRegistrationsModal, setShowRegistrationsModal] = useState(false);
   const [loading, setLoading] = useState(true);
+
 
   const [eventForm, setEventForm] = useState({
     name: '',
@@ -48,15 +52,17 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [eventsRes, regsRes] = await Promise.all([
+      const [eventsRes, regsRes, notifsRes] = await Promise.all([
         axios.get(`${API_URL}/events`),
         axios.get(`${API_URL}/registrations`, {
           headers: { Authorization: `Bearer ${token}` }
-        })
+        }),
+        axios.get(`${API_URL}/notifications`)
       ]);
 
       setEvents(eventsRes.data);
       setRegistrations(regsRes.data);
+      setNotifications(notifsRes.data);
       setStats({
         events: eventsRes.data.length,
         registrations: regsRes.data.length,
@@ -75,15 +81,26 @@ const AdminDashboard = () => {
       const payload = {
         ...eventForm,
         coordinators: eventForm.coordinators.filter(c => c.trim() !== ''),
-        registration_deadline: new Date(eventForm.registration_deadline).toISOString()
+        registration_deadline: eventForm.registration_deadline ? new Date(eventForm.registration_deadline).toISOString() : new Date().toISOString(),
+        venue: 'TBD',
+        timing: 'TBD',
+        capacity: 100
       };
 
-      await axios.post(`${API_URL}/events`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (editingEventId) {
+        await axios.put(`${API_URL}/events/${editingEventId}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Event updated successfully!');
+      } else {
+        await axios.post(`${API_URL}/events`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Event created successfully!');
+      }
 
-      toast.success('Event created successfully!');
       setShowEventForm(false);
+      setEditingEventId(null);
       fetchData();
       setEventForm({
         name: '',
@@ -100,7 +117,39 @@ const AdminDashboard = () => {
         max_events_per_student: 3
       });
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create event');
+      toast.error(error.response?.data?.detail || 'Failed to save event');
+    }
+  };
+
+  const handleEditClick = (event) => {
+    setEventForm({
+      name: event.name,
+      description: event.description,
+      sub_fest: event.sub_fest,
+      event_type: event.event_type,
+      coordinators: event.coordinators,
+      timing: event.timing || '',
+      venue: event.venue || '',
+      registration_deadline: event.registration_deadline ? event.registration_deadline.slice(0, 16) : '',
+      capacity: event.capacity || 50,
+      min_team_size: event.min_team_size || 1,
+      max_team_size: event.max_team_size || 1,
+      max_events_per_student: event.max_events_per_student || 3
+    });
+    setEditingEventId(event.id);
+    setShowEventForm(true);
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm('Are you sure you want to disable this event?')) return;
+    try {
+      await axios.delete(`${API_URL}/events/${eventId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Event disabled');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to disable event');
     }
   };
 
@@ -143,14 +192,56 @@ const AdminDashboard = () => {
 
   const handleExportData = async () => {
     try {
-      const response = await axios.get(`${API_URL}/export/registrations?format=csv`, {
+      const response = await axios.get(`${API_URL}/registrations/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'registrations.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Data exported successfully');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export data');
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId) => {
+    if (!window.confirm('Are you sure you want to delete this notification?')) return;
+    try {
+      await axios.delete(`${API_URL}/notifications/${notificationId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      toast.success('Export data ready. Check console for data.');
-      console.log('Export Data:', response.data);
+      toast.success('Notification deleted');
+      fetchData();
     } catch (error) {
-      toast.error('Failed to export data');
+      toast.error('Failed to delete notification');
+    }
+  };
+
+  const exportEventData = async (eventId, e) => {
+    e.stopPropagation();
+    try {
+      const response = await axios.get(`${API_URL}/registrations/export?event_id=${eventId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `registrations_${eventId}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Event data exported');
+    } catch (error) {
+      toast.error('Failed to export event data');
     }
   };
 
@@ -274,6 +365,18 @@ const AdminDashboard = () => {
               <h3 className="text-lg font-bold mb-2">Export Data</h3>
               <p className="text-gray-400 text-sm">Download registrations</p>
             </button>
+
+            <button
+              onClick={() => navigate('/coordinators')}
+              className="glass p-6 rounded-none text-left hover:bg-white/5 transition-colors group"
+              data-testid="view-coordinators-button"
+            >
+              <Users className="w-8 h-8 text-green-400 mb-3 group-hover:scale-110 transition-transform" />
+              <h3 className="text-lg font-bold mb-2">Coordinators</h3>
+              <p className="text-gray-400 text-sm">View Contact Details</p>
+            </button>
+
+
           </div>
         </motion.div>
 
@@ -287,51 +390,101 @@ const AdminDashboard = () => {
           {loading ? (
             <div className="text-center py-12 text-gray-400">Loading events...</div>
           ) : (
-            <div className="glass rounded-none overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-white/5">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Event</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Sub-Fest</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Type</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Registrations</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {events.map((event, idx) => (
-                      <tr
-                        key={event.id}
-                        className="border-t border-white/10 hover:bg-white/5 transition-colors"
-                        data-testid={`event-row-${event.id}`}
-                      >
-                        <td className="px-6 py-4 font-medium">{event.name}</td>
-                        <td className="px-6 py-4 text-gray-300">{event.sub_fest.split('-')[1]}</td>
-                        <td className="px-6 py-4 text-gray-300 capitalize">{event.event_type}</td>
-                        <td className="px-6 py-4 text-gray-300">{event.registered_count}/{event.capacity}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                            event.is_active ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
-                          }`}>
-                            {event.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => viewEventRegistrations(event.id)}
-                            className="px-4 py-2 glass hover:bg-white/10 transition-colors text-sm"
-                            data-testid={`view-regs-${event.id}`}
-                          >
-                            View Teams
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <div>
+              {['CULTURAL-AKANKSHA', 'SPORTS-AHWAAN', 'TECHNOLOGY-ANWESH', 'OTHER'].map(subFest => {
+                const subFestEvents = events.filter(e => {
+                  if (subFest === 'OTHER') return !['CULTURAL-AKANKSHA', 'SPORTS-AHWAAN', 'TECHNOLOGY-ANWESH'].includes(e.sub_fest);
+                  return e.sub_fest === subFest;
+                });
+
+                if (subFestEvents.length === 0) return null;
+
+                const subFestColor = {
+                  'CULTURAL-AKANKSHA': 'text-[#d946ef]',
+                  'SPORTS-AHWAAN': 'text-[#f97316]',
+                  'TECHNOLOGY-ANWESH': 'text-[#06b6d4]',
+                  'OTHER': 'text-gray-400'
+                }[subFest];
+
+                const subFestTitle = subFest === 'OTHER' ? 'Other Events' :
+                  subFest === 'CULTURAL-AKANKSHA' ? 'CULTURAL - AKANKSHA' :
+                    subFest === 'SPORTS-AHWAAN' ? 'SPORTS - AHWAAN' :
+                      'TECHNOLOGY - ANWESH';
+
+                return (
+                  <div key={subFest} className="mb-8">
+                    <h3 className={`text-xl font-bold mb-4 ${subFestColor}`}>{subFestTitle}</h3>
+                    <div className="glass rounded-none overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-white/5">
+                            <tr>
+                              <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Event</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider md:hidden">Sub-Fest</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Type</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Registrations</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Status</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subFestEvents.map((event) => (
+                              <tr
+                                key={event.id}
+                                className="border-t border-white/10 hover:bg-white/5 transition-colors"
+                                data-testid={`event-row-${event.id}`}
+                              >
+                                <td className="px-6 py-4 font-medium">{event.name}</td>
+                                <td className="px-6 py-4 text-gray-300 md:hidden">{event.sub_fest.split('-')[1]}</td>
+                                <td className="px-6 py-4 text-gray-300 capitalize">{event.event_type}</td>
+                                <td className="px-6 py-4 text-gray-300">{event.registered_count}</td>
+                                <td className="px-6 py-4">
+                                  <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider ${event.is_active ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                                    }`}>
+                                    {event.is_active ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => viewEventRegistrations(event.id)}
+                                      className="p-2 glass hover:bg-white/10 transition-colors text-gray-300"
+                                      title="View Registrations"
+                                    >
+                                      <Users className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => exportEventData(event.id, e)}
+                                      className="p-2 glass hover:bg-green-500/20 text-green-400 transition-colors"
+                                      title="Export CSV"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditClick(event)}
+                                      className="p-2 glass hover:bg-blue-500/20 text-blue-400 transition-colors"
+                                      title="Edit Event"
+                                    >
+                                      <Pencil className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteEvent(event.id)}
+                                      className="p-2 glass hover:bg-red-500/20 text-red-400 transition-colors"
+                                      title="Disable Event"
+                                    >
+                                      <Trash className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </motion.div>
@@ -341,7 +494,14 @@ const AdminDashboard = () => {
       {showEventForm && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="event-form-modal">
           <div className="glass p-8 rounded-none max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-3xl font-black mb-6">Create New Event</h2>
+            <button
+              onClick={() => setShowEventForm(false)}
+              className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+            <h2 className="text-3xl font-black mb-6">{editingEventId ? 'Edit Event' : 'Create New Event'}</h2>
             <form onSubmit={handleCreateEvent} className="space-y-4">
               <input
                 type="text"
@@ -357,7 +517,6 @@ const AdminDashboard = () => {
                 value={eventForm.description}
                 onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
                 className="w-full bg-transparent border border-white/20 focus:border-white/80 px-4 py-3 text-white min-h-24"
-                required
                 data-testid="event-description-input"
               />
               <select
@@ -379,41 +538,16 @@ const AdminDashboard = () => {
                 <option value="individual">Individual</option>
                 <option value="team">Team</option>
               </select>
-              <input
-                type="text"
-                placeholder="Venue"
-                value={eventForm.venue}
-                onChange={(e) => setEventForm({ ...eventForm, venue: e.target.value })}
-                className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                required
-                data-testid="event-venue-input"
-              />
-              <input
-                type="text"
-                placeholder="Timing (e.g., 10:00 AM - 12:00 PM)"
-                value={eventForm.timing}
-                onChange={(e) => setEventForm({ ...eventForm, timing: e.target.value })}
-                className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                required
-                data-testid="event-timing-input"
-              />
+
+              <div className="text-gray-400 text-sm mt-2 mb-1">Registration Deadline</div>
               <input
                 type="datetime-local"
                 value={eventForm.registration_deadline}
                 onChange={(e) => setEventForm({ ...eventForm, registration_deadline: e.target.value })}
                 className="w-full bg-[#0f172a] border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                required
                 data-testid="event-deadline-input"
               />
-              <input
-                type="number"
-                placeholder="Capacity"
-                value={eventForm.capacity}
-                onChange={(e) => setEventForm({ ...eventForm, capacity: parseInt(e.target.value) })}
-                className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                required
-                data-testid="event-capacity-input"
-              />
+
               <div className="flex gap-4 justify-end pt-4">
                 <button
                   type="button"
@@ -428,7 +562,7 @@ const AdminDashboard = () => {
                   className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider"
                   data-testid="submit-event-button"
                 >
-                  Create Event
+                  {editingEventId ? 'Update Event' : 'Create Event'}
                 </button>
               </div>
             </form>
@@ -467,6 +601,33 @@ const AdminDashboard = () => {
                 className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
                 data-testid="notification-image-input"
               />
+
+              <div className="mt-8 border-t border-white/10 pt-6">
+                <h3 className="text-xl font-bold mb-4">Existing Notifications</h3>
+                {notifications.length === 0 ? (
+                  <p className="text-gray-400">No active notifications.</p>
+                ) : (
+                  <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                    {notifications.map(notif => (
+                      <div key={notif.id} className="glass p-4 rounded-none flex justify-between items-start gap-4">
+                        <div>
+                          <h4 className="font-bold">{notif.title}</h4>
+                          <p className="text-sm text-gray-400 line-clamp-2">{notif.message}</p>
+                          <span className="text-xs text-gray-500">{new Date(notif.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNotification(notif.id)}
+                          className="text-red-400 hover:text-red-300 p-1"
+                          title="Delete Notification"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="flex gap-4 justify-end pt-4">
                 <button
                   type="button"
@@ -610,6 +771,8 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+
     </div>
   );
 };

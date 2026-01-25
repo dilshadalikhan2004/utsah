@@ -1,227 +1,320 @@
-import { motion } from 'framer-motion';
+import { useRef, useState, useEffect } from 'react';
+import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Calendar, Users, Trophy } from 'lucide-react';
+import { Sparkles, Calendar, Users, Trophy, ArrowRight, Play, Music, Cpu, Medal, Instagram, Facebook, Twitter, Mail } from 'lucide-react';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const containerRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
 
-  const subFests = [
-    {
-      name: 'CULTURAL',
-      title: 'AKANKSHA',
-      description: 'Unleash your artistic soul',
-      color: '#d946ef',
-      glowClass: 'glow-cultural',
-      image: 'https://images.pexels.com/photos/102127/pexels-photo-102127.jpeg'
-    },
-    {
-      name: 'SPORTS',
-      title: 'AHWAAN',
-      description: 'Rise to the challenge',
-      color: '#f97316',
-      glowClass: 'glow-sports',
-      image: 'https://images.pexels.com/photos/5961761/pexels-photo-5961761.jpeg'
-    },
-    {
-      name: 'TECHNOLOGY',
-      title: 'ANWESH',
-      description: 'Innovate the future',
-      color: '#06b6d4',
-      glowClass: 'glow-tech',
-      image: 'https://images.unsplash.com/photo-1655393001768-d946c97d6fd1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxyb2JvdGljcyUyMHRlY2hub2xvZ3klMjBmdXR1cmlzdGljfGVufDB8fHx8MTc2OTI3Mzk5NXww&ixlib=rb-4.1.0&q=85'
-    }
-  ];
+  const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+
+  // Mouse move effect for hero
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  function handleMouseMove({ clientX, clientY, currentTarget }) {
+    let { left, top, width, height } = currentTarget.getBoundingClientRect();
+    let xPosition = clientX - left;
+    let yPosition = clientY - top;
+    mouseX.set(xPosition);
+    mouseY.set(yPosition);
+  }
 
   return (
-    <div className="min-h-screen bg-[#030712]">
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden" data-testid="hero-section">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#d946ef]/10 via-transparent to-transparent" />
-        
+    <div ref={containerRef} className="min-h-screen bg-[#030712] text-white selection:bg-[#d946ef] selection:text-white overflow-hidden" onMouseMove={handleMouseMove}>
+
+      {/* Navbar Overlay */}
+      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center bg-black/50 backdrop-blur-md border-b border-white/5">
+        <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#06b6d4]">UTSAH</div>
+        <div className="flex gap-4">
+          <button onClick={() => navigate('/login')} className="px-4 py-2 text-sm font-bold uppercase tracking-wider hover:text-[#d946ef] transition-colors">Login</button>
+          <button onClick={() => navigate('/register')} className="px-6 py-2 bg-[#d946ef] hover:bg-[#c026d3] text-white text-sm font-bold uppercase tracking-wider transition-colors clip-button">Register</button>
+        </div>
+      </nav>
+
+      {/* HERO SECTION */}
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Animated Background Grid */}
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-150 mix-blend-overlay pointer-events-none"></div>
+        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[length:50px_50px] pointer-events-none" />
+
+        {/* Spotlight Effect */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 text-center px-6 max-w-6xl mx-auto"
+          className="pointer-events-none absolute -inset-px rounded-xl opacity-0 transition duration-300 group-hover:opacity-100"
+          style={{
+            background: useMotionTemplate`
+                    radial-gradient(
+                    650px circle at ${mouseX}px ${mouseY}px,
+                    rgba(217, 70, 239, 0.15),
+                    transparent 80%
+                    )
+                `,
+          }}
+        />
+
+        <motion.div
+          style={{ y: heroY, opacity: heroOpacity }}
+          className="relative z-10 max-w-7xl mx-auto px-6 text-center"
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="mb-6"
+            transition={{ duration: 1 }}
+            className="mt-10 mb-1 relative z-10"
           >
-            <Sparkles className="w-16 h-16 mx-auto text-[#d946ef] pulse-glow" />
+            <img src="/logo.png" alt="UTSAH Logo" className="w-40 md:w-80 mx-auto drop-shadow-[0_0_50px_rgba(217,70,239,0.5)]" />
           </motion.div>
 
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tight mb-6" data-testid="hero-title">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] via-[#f97316] to-[#06b6d4]">
-              UTSAH
-            </span>
+          <h1 className="text-7xl md:text-9xl font-black tracking-tighter mb-2 -mt-6 leading-none">
+            <motion.span
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="text-white text-5xl md:text-8xl"
+            >
+              2026
+            </motion.span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-400 mb-4 font-light" data-testid="hero-subtitle">
-            GITA Autonomous College Annual Fest 2026
-          </p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: 1 }}
+            className="text-xl md:text-2xl text-gray-400 mb-8 -mt-13 max-w-2xl mx-auto font-light tracking-wide"
+          >
+            THE ULTIMATE CONVERGENCE OF <span className="text-white font-bold">CULTURE</span>, <span className="text-white font-bold">SPORTS</span> & <span className="text-white font-bold">TECH</span>
+          </motion.p>
 
-          <p className="text-lg md:text-xl text-gray-500 mb-12 max-w-2xl mx-auto">
-            Three days of culture, sports, and technology. One unforgettable experience.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <motion.button
-              whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(217, 70, 239, 0.6)' }}
-              whileTap={{ scale: 0.95 }}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+          >
+            <button
               onClick={() => navigate('/register')}
-              className="px-10 py-4 bg-[#d946ef] text-white font-bold uppercase tracking-wider rounded-none text-lg"
-              data-testid="register-button"
+              className="group relative px-8 py-4 bg-white text-black font-bold uppercase tracking-widest overflow-hidden hover:scale-105 transition-transform duration-300"
             >
-              Register Now
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/login')}
-              className="px-10 py-4 glass text-white font-bold uppercase tracking-wider rounded-none text-lg"
-              data-testid="login-button"
+              <span className="relative z-10 flex items-center gap-2">Register Now <ArrowRight className="w-4 h-4" /></span>
+              <div className="absolute inset-0 bg-[#d946ef] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
+            </button>
+            <button
+              onClick={() => document.getElementById('about').scrollIntoView({ behavior: 'smooth' })}
+              className="px-8 py-4 border border-white/20 text-white font-bold uppercase tracking-widest hover:bg-white/5 transition-colors"
             >
-              Login
-            </motion.button>
-          </div>
+              Learn More
+            </button>
+          </motion.div>
         </motion.div>
 
-        {/* Floating particles */}
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-2 h-2 bg-white rounded-full"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                opacity: 0.1
-              }}
-              animate={{
-                y: [0, -30, 0],
-                opacity: [0.1, 0.3, 0.1]
-              }}
-              transition={{
-                duration: 3 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 2
-              }}
-            />
-          ))}
+        {/* Floating Icons Background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <FloatingElement icon={Music} color="#d946ef" x="10%" y="20%" delay={0} />
+          <FloatingElement icon={Cpu} color="#06b6d4" x="85%" y="15%" delay={2} />
+          <FloatingElement icon={Medal} color="#f97316" x="20%" y="80%" delay={4} />
+          <FloatingElement icon={Trophy} color="#22c55e" x="80%" y="75%" delay={6} />
         </div>
-      </section>
+      </div>
 
-      {/* Sub-Fests Section */}
-      <section className="py-24 px-6" data-testid="subfests-section">
+      {/* TICKER TAPE */}
+      <div className="bg-[#d946ef] py-4 rotate-1 scale-110 overflow-hidden shadow-[0_0_50px_rgba(217,70,239,0.5)] z-20 relative my-12">
         <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="max-w-7xl mx-auto"
+          className="flex gap-5 whitespace-nowrap text-black font-black text-2xl uppercase tracking-widest"
+          animate={{ x: [0, -1000] }}
+          transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
         >
-          <h2 className="text-4xl md:text-6xl font-black text-center mb-6" data-testid="subfests-title">
-            Three Festivals. One Vision.
-          </h2>
-          <p className="text-center text-gray-400 text-lg mb-16 max-w-2xl mx-auto">
-            Experience the perfect blend of creativity, athleticism, and innovation
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {subFests.map((fest, idx) => (
-              <motion.div
-                key={fest.name}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.2, duration: 0.6 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -8, scale: 1.02 }}
-                className="glass rounded-none overflow-hidden group cursor-pointer"
-                data-testid={`subfest-card-${fest.name.toLowerCase()}`}
-              >
-                <div className="relative h-64 overflow-hidden">
-                  <img
-                    src={fest.image}
-                    alt={fest.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-transparent to-transparent" />
-                </div>
-
-                <div className="p-6">
-                  <p className="text-sm text-gray-500 mb-2 uppercase tracking-wider">{fest.name}</p>
-                  <h3 className="text-3xl font-black mb-3" style={{ color: fest.color }}>
-                    {fest.title}
-                  </h3>
-                  <p className="text-gray-400 mb-6">{fest.description}</p>
-                  <button
-                    onClick={() => navigate('/events', { state: { subFest: fest.name } })}
-                    className="w-full py-3 glass font-bold uppercase tracking-wider hover:bg-white/10 transition-colors"
-                    data-testid={`explore-${fest.name.toLowerCase()}-button`}
-                  >
-                    Explore Events
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          {[...Array(20)].map((_, i) => (
+            <span key={i} className="flex items-center gap-5">
+              UTSAH 2026 ✦ GITA AUTONOMOUS COLLEGE ✦ REGISTER NOW ✦
+            </span>
+          ))}
         </motion.div>
-      </section>
+      </div>
 
-      {/* Quick Links Section */}
-      <section className="py-24 px-6 bg-[#0f172a]" data-testid="quick-links-section">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              onClick={() => navigate('/gallery')}
-              className="glass p-8 rounded-none cursor-pointer group"
-              data-testid="gallery-link"
-            >
-              <Calendar className="w-12 h-12 text-[#d946ef] mb-4 group-hover:scale-110 transition-transform" />
-              <h3 className="text-2xl font-bold mb-2">Gallery</h3>
-              <p className="text-gray-400">Relive the magical moments</p>
-            </motion.div>
+      {/* ABOUT SECTION */}
+      <section id="about" className="py-24 px-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-[#d946ef] to-[#06b6d4] opacity-75 blur-2xl group-hover:opacity-100 transition-opacity duration-500" />
+            <img
+              src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070&auto=format&fit=crop"
+              alt="Concert Crowd"
+              className="relative z-10 w-full h-[500px] object-cover grayscale group-hover:grayscale-0 transition-all duration-700 clip-path-polygon"
+            />
+          </div>
 
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              onClick={() => navigate('/shortlist')}
-              className="glass p-8 rounded-none cursor-pointer group"
-              data-testid="shortlist-link"
+          <div>
+            <motion.h2
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-5xl md:text-7xl font-black mb-8 leading-tight"
             >
-              <Users className="w-12 h-12 text-[#f97316] mb-4 group-hover:scale-110 transition-transform" />
-              <h3 className="text-2xl font-bold mb-2">Aakanksha Shortlist</h3>
-              <p className="text-gray-400">Check if you made the cut</p>
-            </motion.div>
+              IGNITE <br />
+              <span className="text-[#06b6d4]">YOUR</span> <br />
+              PASSION
+            </motion.h2>
+            <p className="text-xl text-gray-400 mb-8 leading-relaxed">
+              Experience 72 hours of non-stop energy, creativity, and competition.
+              UTSAH 2026 brings together the brightest minds and the most talented souls
+              for an extravaganza unlike any other.
+            </p>
 
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              onClick={() => navigate('/events')}
-              className="glass p-8 rounded-none cursor-pointer group"
-              data-testid="events-link"
-            >
-              <Trophy className="w-12 h-12 text-[#06b6d4] mb-4 group-hover:scale-110 transition-transform" />
-              <h3 className="text-2xl font-bold mb-2">All Events</h3>
-              <p className="text-gray-400">Browse and register</p>
-            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-6 border-t border-white/10" data-testid="footer">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-gray-500">
-            © 2026 UTSAH - GITA Autonomous College, Bhubaneswar. All rights reserved.
+      {/* SUB FESTS */}
+      <section className="py-24 px-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0f172a] to-transparent pointer-events-none" />
+        <div className="max-w-7xl mx-auto relative z-10">
+          <motion.h2
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            className="text-4xl md:text-6xl font-black text-center mb-20"
+          >
+            THE TRINITY OF <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f97316] to-[#d946ef]">TALENT</span>
+          </motion.h2>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <FestCard
+              title="AKANKSHA"
+              subtitle="Cultural"
+              color="#d946ef"
+              icon={Music}
+              img="/akanksha_black_tshirt.png"
+              fit="contain"
+              onClick={() => navigate('/events', { state: { subFest: 'CULTURAL-AKANKSHA' } })}
+            />
+            <FestCard
+              title="AHWAAN"
+              subtitle="Sports"
+              color="#f97316"
+              icon={Medal}
+              img="/ahwan_white_tshirt.png"
+              onClick={() => navigate('/events', { state: { subFest: 'SPORTS-AHWAAN' } })}
+            />
+            <FestCard
+              title="ANWESH"
+              subtitle="Technical"
+              color="#06b6d4"
+              icon={Cpu}
+              img="/anwesh_grey_tshirt.png"
+              onClick={() => navigate('/events', { state: { subFest: 'TECHNOLOGY-ANWESH' } })}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* CALL TO ACTION */}
+      <section className="py-32 px-6 text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[#d946ef]/10" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-150 mix-blend-overlay pointer-events-none"></div>
+
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          whileInView={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", bounce: 0.4 }}
+          className="relative z-10 max-w-4xl mx-auto glass p-12 border border-white/10"
+        >
+          <h2 className="text-5xl md:text-7xl font-black mb-6">READY TO SHINE?</h2>
+          <p className="text-xl text-gray-300 mb-8">
+            Registrations are filling up fast. Don't miss your chance to be part of history.
           </p>
+          <button
+            onClick={() => navigate('/register')}
+            className="px-12 py-5 bg-white text-black text-xl font-bold uppercase tracking-widest hover:scale-105 transition-transform"
+          >
+            Get Your Pass
+          </button>
+        </motion.div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-black py-12 px-6 border-t border-white/10">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="text-center md:text-left">
+            <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#06b6d4]">UTSAH 2026</div>
+            <p className="text-gray-500 mt-2">GITA Autonomous College</p>
+          </div>
+          <div className="flex gap-6">
+            <SocialLink icon={Instagram} />
+            <SocialLink icon={Facebook} />
+            <SocialLink icon={Twitter} />
+            <SocialLink icon={Mail} />
+          </div>
+          <div className="text-gray-600 text-sm">
+            &copy; 2026 Utsah Team. All rights reserved.
+          </div>
         </div>
       </footer>
     </div>
   );
 };
+
+// Helper Components
+
+const FloatingElement = ({ icon: Icon, color, x, y, delay }) => (
+  <motion.div
+    className="absolute w-16 h-16 opacity-30"
+    style={{ left: x, top: y, color: color }}
+    animate={{
+      y: [0, -20, 0],
+      rotate: [0, 10, -10, 0],
+      scale: [1, 1.1, 1]
+    }}
+    transition={{
+      duration: 5,
+      repeat: Infinity,
+      delay: delay,
+      ease: "easeInOut"
+    }}
+  >
+    <Icon className="w-full h-full" />
+  </motion.div>
+);
+
+const FestCard = ({ title, subtitle, desc, color, icon: Icon, img, onClick, fit = "cover" }) => (
+  <motion.div
+    onClick={onClick}
+    className="group relative h-[400px] overflow-hidden cursor-pointer"
+    whileHover={{ y: -10 }}
+  >
+    <div className="absolute inset-0 bg-black/50 z-10 group-hover:bg-black/30 transition-colors duration-500" />
+    <img src={img} alt={title} className={`absolute inset-0 w-full h-full object-${fit} grayscale group-hover:grayscale-0 scale-100 group-hover:scale-110 transition-all duration-700`} />
+
+    <div className="absolute inset-0 z-20 p-8 flex flex-col justify-end">
+      <div
+        className="w-12 h-12 mb-4 rounded-full flex items-center justify-center text-black transform translate-y-8 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500"
+        style={{ backgroundColor: color }}
+      >
+        <Icon className="w-6 h-6" />
+      </div>
+
+      <p className="text-sm font-bold tracking-widest uppercase mb-2" style={{ color: color }}>
+        {subtitle}
+      </p>
+      <h3 className="text-4xl font-black text-white mb-2">{title}</h3>
+      <p className="text-gray-300 opacity-80 max-w-[250px] transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+        {desc}
+      </p>
+    </div>
+
+    {/* Border Effect */}
+    <div className="absolute inset-0 border-2 border-transparent group-hover:border-white/20 transition-colors duration-500 z-30" />
+  </motion.div>
+);
+
+const SocialLink = ({ icon: Icon }) => (
+  <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-white hover:text-black transition-all">
+    <Icon className="w-5 h-5" />
+  </a>
+);
 
 export default LandingPage;

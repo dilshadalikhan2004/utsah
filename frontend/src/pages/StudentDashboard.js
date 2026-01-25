@@ -3,21 +3,54 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { LogOut, Calendar, Trophy, Bell, User } from 'lucide-react';
+import { LogOut, Calendar, Trophy, Bell, User, Pencil, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const StudentDashboard = () => {
-  const { user, logout, token } = useAuth();
+  const { user, logout, token, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ registrations: 0, notifications: 0 });
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('ALL');
+
+  const filteredEvents = events.filter(event => {
+    if (activeTab === 'ALL') return true;
+    return event.sub_fest === activeTab;
+  });
+
+  const tabs = [
+    { id: 'ALL', label: 'All Events' },
+    { id: 'CULTURAL-AKANKSHA', label: 'Akanksha (Cultural)' },
+    { id: 'SPORTS-AHWAAN', label: 'Ahwaan (Sports)' },
+    { id: 'TECHNOLOGY-ANWESH', label: 'Anwesh (Tech)' }
+  ];
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    full_name: '',
+    department: '',
+    year: 1,
+    mobile_number: '',
+    roll_number: ''
+  });
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        full_name: user.full_name || '',
+        department: user.department || '',
+        year: user.year || 1,
+        mobile_number: user.mobile_number || '',
+        roll_number: user.roll_number || ''
+      });
+    }
+  }, [user]);
 
   const fetchData = async () => {
     try {
@@ -33,11 +66,25 @@ const StudentDashboard = () => {
         registrations: regsRes.data.length,
         notifications: notifsRes.data.length
       });
-      setEvents(eventsRes.data.slice(0, 6));
+      setEvents(eventsRes.data);
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API_URL}/auth/me`, profileForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Profile updated successfully');
+      setShowProfileModal(false);
+      await refreshUser();
+    } catch (error) {
+      toast.error('Failed to update profile');
     }
   };
 
@@ -127,9 +174,16 @@ const StudentDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="glass p-6 rounded-none"
+            className="glass p-6 rounded-none relative group"
             data-testid="profile-card"
           >
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+              title="Edit Profile"
+            >
+              <Pencil className="w-5 h-5" />
+            </button>
             <User className="w-10 h-10 text-gray-400 mb-3" />
             <p className="text-lg font-bold mb-1">{user?.roll_number}</p>
             <p className="text-gray-400 text-sm">{user?.department}</p>
@@ -144,7 +198,7 @@ const StudentDashboard = () => {
           className="mb-12"
         >
           <h2 className="text-3xl font-black mb-6" data-testid="quick-actions-title">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <button
               onClick={() => navigate('/events')}
               className="glass p-6 rounded-none text-left hover:bg-white/5 transition-colors group"
@@ -174,56 +228,173 @@ const StudentDashboard = () => {
               <h3 className="text-xl font-bold mb-2">View Gallery</h3>
               <p className="text-gray-400 text-sm">Relive memorable moments</p>
             </button>
+
+            <button
+              onClick={() => navigate('/coordinators')}
+              className="glass p-6 rounded-none text-left hover:bg-white/5 transition-colors group"
+              data-testid="view-coordinators-button"
+            >
+              <Users className="w-8 h-8 text-green-400 mb-3 group-hover:scale-110 transition-transform" />
+              <h3 className="text-xl font-bold mb-2">Coordinators</h3>
+              <p className="text-gray-400 text-sm">Contact event leads</p>
+            </button>
           </div>
         </motion.div>
 
-        {/* Featured Events */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-black" data-testid="featured-events-title">Featured Events</h2>
-            <button
-              onClick={() => navigate('/events')}
-              className="text-[#d946ef] hover:text-[#ec4899] font-medium"
-              data-testid="view-all-events-link"
-            >
-              View All →
-            </button>
+        {/* Events Section */}
+        <div className="mb-12">
+          <h2 className="text-3xl font-black mb-6" data-testid="events-section-title">Explore Events</h2>
+
+          {/* Tabs */}
+          <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 rounded-none font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${activeTab === tab.id
+                  ? 'bg-white text-black border-white'
+                  : 'glass text-gray-400 border-transparent hover:border-white/20 hover:text-white'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
+          {/* Akanksha Special Section */}
+          {activeTab === 'CULTURAL-AKANKSHA' && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8"
+            >
+              <button
+                onClick={() => navigate('/coordinators')}
+                className="w-full glass p-8 border-l-4 border-[#d946ef] text-left hover:bg-white/5 transition-colors group relative overflow-hidden"
+              >
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#ec4899] mb-2 group-hover:translate-x-2 transition-transform">
+                    Audition Registration & Rules →
+                  </h3>
+                  <p className="text-gray-300 max-w-xl">
+                    Click here to view the complete schedule, venue details, and rules for the auditions.
+                  </p>
+                </div>
+              </button>
+            </motion.div>
+          )}
+
+          {/* Event Grid */}
           {loading ? (
             <div className="text-center py-12 text-gray-400">Loading events...</div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="text-center py-12 glass rounded-none">
+              <p className="text-gray-400">No events found in this category.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events.map((event, idx) => (
+              {filteredEvents.map((event, idx) => (
                 <motion.div
                   key={event.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 + idx * 0.1 }}
+                  transition={{ delay: idx * 0.05 }}
                   onClick={() => navigate(`/events/${event.id}`)}
-                  className="glass p-6 rounded-none cursor-pointer hover:bg-white/5 transition-colors event-card"
-                  data-testid={`event-card-${event.id}`}
+                  className="glass p-6 rounded-none cursor-pointer hover:bg-white/5 transition-colors event-card relative"
                 >
                   <div
                     className="w-12 h-1 mb-4"
-                    style={{ backgroundColor: subFestColors[event.sub_fest] }}
+                    style={{ backgroundColor: subFestColors[event.sub_fest] || '#FFF' }}
                   />
                   <h3 className="text-xl font-bold mb-2">{event.name}</h3>
                   <p className="text-gray-400 text-sm mb-4 line-clamp-2">{event.description}</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">{event.event_type}</span>
-                    <span className="text-[#d946ef]">{event.registered_count}/{event.capacity}</span>
-                  </div>
+
                 </motion.div>
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
+
+      {/* Profile Edit Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6">
+          <div className="glass p-8 rounded-none max-w-md w-full">
+            <h2 className="text-2xl font-black mb-6">Edit Profile</h2>
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div>
+                <label className="text-gray-400 text-sm mb-1 block">Full Name</label>
+                <input
+                  type="text"
+                  value={profileForm.full_name}
+                  onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm mb-1 block">Roll Number</label>
+                <input
+                  type="text"
+                  value={profileForm.roll_number}
+                  onChange={(e) => setProfileForm({ ...profileForm, roll_number: e.target.value })}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm mb-1 block">Department</label>
+                <input
+                  type="text"
+                  value={profileForm.department}
+                  onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm mb-1 block">Year</label>
+                <select
+                  value={profileForm.year}
+                  onChange={(e) => setProfileForm({ ...profileForm, year: parseInt(e.target.value) })}
+                  className="w-full bg-[#0f172a] border-b border-white/20 px-4 py-2 text-white"
+                >
+                  <option value={1}>1st Year</option>
+                  <option value={2}>2nd Year</option>
+                  <option value={3}>3rd Year</option>
+                  <option value={4}>4th Year</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm mb-1 block">Mobile Number</label>
+                <input
+                  type="tel"
+                  value={profileForm.mobile_number}
+                  onChange={(e) => setProfileForm({ ...profileForm, mobile_number: e.target.value })}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-2 text-white"
+                />
+              </div>
+
+              <div className="flex gap-4 justify-end pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="px-4 py-2 glass hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#d946ef] hover:bg-[#ec4899] font-bold"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

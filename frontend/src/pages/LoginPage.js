@@ -3,12 +3,13 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { ArrowLeft, Mail, Lock } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -18,7 +19,7 @@ const LoginPage = () => {
     try {
       const response = await login(formData.email, formData.password);
       toast.success('Login successful!');
-      
+
       if (response.user.role === 'admin') {
         navigate('/admin');
       } else {
@@ -75,14 +76,22 @@ const LoginPage = () => {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 pl-12 pr-4 py-3 text-white"
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 pl-12 pr-12 py-3 text-white"
                   placeholder="••••••••"
                   required
                   data-testid="password-input"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                  data-testid="toggle-password-visibility"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
@@ -110,10 +119,6 @@ const LoginPage = () => {
           </div>
         </div>
 
-        <div className="mt-6 p-4 glass rounded-none" data-testid="demo-credentials">
-          <p className="text-sm text-gray-400 mb-2">Demo Credentials:</p>
-          <p className="text-sm text-gray-300">Admin: admin@utsah.com / Admin@123</p>
-        </div>
       </motion.div>
     </div>
   );

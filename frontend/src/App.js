@@ -16,6 +16,7 @@ import MyRegistrationsPage from './pages/MyRegistrationsPage';
 import GalleryPage from './pages/GalleryPage';
 import ShortlistPage from './pages/ShortlistPage';
 import NotificationsPage from './pages/NotificationsPage';
+import CoordinatorsPage from './pages/CoordinatorsPage';
 
 // Auth context
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -42,13 +43,14 @@ function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/gallery" element={<GalleryPage />} />
       <Route path="/shortlist" element={<ShortlistPage />} />
-      
+
       <Route path="/student" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
       <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
       <Route path="/events/:eventId" element={<ProtectedRoute><EventDetailsPage /></ProtectedRoute>} />
       <Route path="/my-registrations" element={<ProtectedRoute><MyRegistrationsPage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-      
+      <Route path="/coordinators" element={<ProtectedRoute><CoordinatorsPage /></ProtectedRoute>} />
+
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
     </Routes>
   );

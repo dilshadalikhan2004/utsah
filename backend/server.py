@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Query, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -12,19 +12,35 @@ from datetime import datetime, timezone, timedelta
 import jwt
 from passlib.context import CryptContext
 import pandas as pd
+import io
 from io import BytesIO
 import csv
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import openpyxl
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+import bcrypt
+# Monkeypatch bcrypt for passlib compatibility
+if not hasattr(bcrypt, "__about__"):
+    bcrypt.__about__ = type('About', (object,), {'__version__': bcrypt.__version__})
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.getenv("MONGO_URL")
+db_name = os.getenv("DB_NAME")
+
+if not mongo_url or not db_name:
+    raise RuntimeError("❌ MONGO_URL or DB_NAME missing in environment")
+
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[db_name]
 
 # Security
 JWT_SECRET = os.environ.get('JWT_SECRET', 'utsah-secret-key-2026-fest-gita-college')
@@ -34,6 +50,14 @@ security = HTTPBearer()
 
 # Create the main app without a prefix
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -130,17 +154,18 @@ class EventResponse(BaseModel):
     description: str
     sub_fest: str
     event_type: str
-    coordinators: List[str]
-    timing: str
-    venue: str
+    coordinators: List[str] = []
+    timing: str = "TBD"
+    venue: str = "TBD"
     registration_deadline: datetime
-    capacity: int
+    capacity: int = 100
     registered_count: int = 0
     is_active: bool = True
-    min_team_size: int
-    max_team_size: int
-    max_events_per_student: int
-    created_at: datetime
+    min_team_size: int = 1
+    max_team_size: int = 1
+    max_events_per_student: int = 3
+    created_at: Optional[datetime] = None
+
 
 class TeamMember(BaseModel):
     full_name: str
@@ -209,31 +234,35 @@ async def register(user_data: UserRegister):
         raise HTTPException(status_code=400, detail="Roll number already registered")
     
     # Create user
-    user_dict = user_data.model_dump()
-    user_dict['password'] = hash_password(user_data.password)
-    user_dict['role'] = 'student'
-    user_dict['verified'] = True  # Mock email verification
-    user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
-    user_dict['id'] = user_data.email
-    
-    await db.users.insert_one(user_dict)
-    
-    # Create token
-    token = create_token({"sub": user_data.email, "role": "student"})
-    
-    user_response = UserResponse(
-        email=user_dict['email'],
-        full_name=user_dict['full_name'],
-        roll_number=user_dict['roll_number'],
-        department=user_dict['department'],
-        year=user_dict['year'],
-        mobile_number=user_dict['mobile_number'],
-        role=user_dict['role'],
-        verified=user_dict['verified'],
-        created_at=datetime.fromisoformat(user_dict['created_at'])
-    )
-    
-    return TokenResponse(token=token, user=user_response)
+    try:
+        user_dict = user_data.model_dump()
+        user_dict['password'] = hash_password(user_data.password)
+        user_dict['role'] = 'student'
+        user_dict['verified'] = True  # Mock email verification
+        user_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+        user_dict['id'] = user_data.email
+        
+        await db.users.insert_one(user_dict)
+        
+        # Create token
+        token = create_token({"sub": user_data.email, "role": "student"})
+        
+        user_response = UserResponse(
+            email=user_dict['email'],
+            full_name=user_dict['full_name'],
+            roll_number=user_dict['roll_number'],
+            department=user_dict['department'],
+            year=user_dict['year'],
+            mobile_number=user_dict['mobile_number'],
+            role=user_dict['role'],
+            verified=user_dict['verified'],
+            created_at=datetime.fromisoformat(user_dict['created_at'])
+        )
+        
+        return TokenResponse(token=token, user=user_response)
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
@@ -271,7 +300,37 @@ async def get_me(user: dict = Depends(get_current_user)):
         mobile_number=user['mobile_number'],
         role=user['role'],
         verified=user['verified'],
-        created_at=datetime.fromisoformat(user['created_at'])
+        created_at=datetime.fromisoformat(user['created_at']) if isinstance(user['created_at'], str) else user['created_at']
+    )
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    department: Optional[str] = None
+    year: Optional[int] = None
+    mobile_number: Optional[str] = None
+    roll_number: Optional[str] = None
+
+@api_router.put("/auth/me", response_model=UserResponse)
+async def update_me(updates: UserUpdate, user: dict = Depends(get_current_user)):
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    
+    if not update_data:
+         raise HTTPException(status_code=400, detail="No updates provided")
+         
+    await db.users.update_one({"email": user['email']}, {"$set": update_data})
+    
+    updated_user = await db.users.find_one({"email": user['email']}, {"_id": 0})
+    
+    return UserResponse(
+        email=updated_user['email'],
+        full_name=updated_user['full_name'],
+        roll_number=updated_user['roll_number'],
+        department=updated_user['department'],
+        year=updated_user['year'],
+        mobile_number=updated_user['mobile_number'],
+        role=updated_user['role'],
+        verified=updated_user['verified'],
+        created_at=datetime.fromisoformat(updated_user['created_at']) if isinstance(updated_user['created_at'], str) else updated_user['created_at']
     )
 
 # Event endpoints
@@ -336,6 +395,45 @@ async def update_event(event_id: str, event: EventCreate, admin: dict = Depends(
     
     return EventResponse(**updated)
 
+class EventUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    sub_fest: Optional[str] = None
+    event_type: Optional[str] = None
+    coordinators: Optional[List[str]] = None
+    timing: Optional[str] = None
+    venue: Optional[str] = None
+    registration_deadline: Optional[datetime] = None
+    capacity: Optional[int] = None
+    min_team_size: Optional[int] = None
+    max_team_size: Optional[int] = None
+    max_events_per_student: Optional[int] = None
+    is_active: Optional[bool] = None
+
+@api_router.put("/events/{event_id}", response_model=EventResponse)
+async def update_event(event_id: str, updates: EventUpdate, admin: dict = Depends(get_admin_user)):
+    # Prepare update data
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    
+    if not update_data:
+         raise HTTPException(status_code=400, detail="No updates provided")
+
+    if 'registration_deadline' in update_data:
+        update_data['registration_deadline'] = update_data['registration_deadline'].isoformat()
+        
+    result = await db.events.update_one({"id": event_id}, {"$set": update_data})
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    updated = await db.events.find_one({"id": event_id}, {"_id": 0})
+    if isinstance(updated['registration_deadline'], str):
+        updated['registration_deadline'] = datetime.fromisoformat(updated['registration_deadline'])
+    if isinstance(updated['created_at'], str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    return EventResponse(**updated)
+
 @api_router.delete("/events/{event_id}")
 async def disable_event(event_id: str, admin: dict = Depends(get_admin_user)):
     result = await db.events.update_one({"id": event_id}, {"$set": {"is_active": False}})
@@ -368,13 +466,21 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
         raise HTTPException(status_code=400, detail="Already registered for this event")
     
     # Check participation limit per sub-fest
+    SUB_FEST_LIMITS = {
+        "TECHNOLOGY-ANWESH": 3,
+        "CULTURAL-AKANKSHA": 2,
+        "SPORTS-AHWAAN": 4
+    }
+    
+    limit = SUB_FEST_LIMITS.get(event['sub_fest'], 3) # Default to 3 if unknown
+    
     sub_fest_registrations = await db.registrations.count_documents({
         "student_email": user['email'],
         "sub_fest": event['sub_fest']
     })
     
-    if sub_fest_registrations >= event['max_events_per_student']:
-        raise HTTPException(status_code=400, detail=f"Maximum {event['max_events_per_student']} events allowed per sub-fest")
+    if sub_fest_registrations >= limit:
+        raise HTTPException(status_code=400, detail=f"Maximum {limit} events allowed for {event['sub_fest'].split('-')[1]}")
     
     # Handle team events
     team_members = None
@@ -425,7 +531,72 @@ async def get_my_registrations(user: dict = Depends(get_current_user)):
 @api_router.get("/registrations", response_model=List[Dict[str, Any]])
 async def get_all_registrations(admin: dict = Depends(get_admin_user)):
     registrations = await db.registrations.find({}, {"_id": 0}).to_list(10000)
+    
+    for reg in registrations:
+        if reg.get("student_email"):
+            user = await db.users.find_one({"email": reg["student_email"]}, {"_id": 0})
+            if user:
+                reg.update({
+                    "full_name": user.get("full_name"),
+                    "roll_number": user.get("roll_number"),
+                    "department": user.get("department"),
+                    "year": user.get("year"),
+                    "mobile_number": user.get("mobile_number")
+                })
     return registrations
+
+@api_router.get("/registrations/export")
+async def export_registrations(event_id: Optional[str] = None, admin: dict = Depends(get_admin_user)):
+    query = {}
+    if event_id:
+        query["event_id"] = event_id
+        
+    registrations = await db.registrations.find(query, {"_id": 0}).to_list(10000)
+    
+    if not registrations:
+        return Response(content="No registrations found", media_type="text/csv")
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Headers
+    headers = ["Registration ID", "Event", "Sub-Fest", "Date", "Full Name", "Roll No", "Dept", "Year", "Mobile", "Email", "Team Members"]
+    writer.writerow(headers)
+    
+    for reg in registrations:
+        # Enrichment
+        if reg.get("student_email"):
+            user = await db.users.find_one({"email": reg["student_email"]}, {"_id": 0})
+            if user:
+                reg.update({
+                    "full_name": user.get("full_name"),
+                    "roll_number": user.get("roll_number"),
+                    "department": user.get("department"),
+                    "year": user.get("year"),
+                    "mobile_number": user.get("mobile_number")
+                })
+                
+        team_str = ""
+        if reg.get('team_members'):
+            team_str = "; ".join([f"{m['full_name']} ({m['roll_number']})" for m in reg['team_members']])
+            
+        writer.writerow([
+            reg.get('id', ''),
+            reg.get('event_name', ''),
+            reg.get('sub_fest', ''),
+            reg.get('registered_at', ''),
+            reg.get('full_name', ''),
+            reg.get('roll_number', ''),
+            reg.get('department', ''),
+            reg.get('year', ''),
+            reg.get('mobile_number', ''),
+            reg.get('student_email', ''),
+            team_str
+        ])
+        
+    output.seek(0)
+    filename = f"registrations_{event_id}.csv" if event_id else "all_registrations.csv"
+    return Response(content=output.getvalue(), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 # Notification endpoints
 @api_router.post("/notifications", response_model=NotificationResponse)
@@ -447,6 +618,13 @@ async def get_notifications():
             notif['created_at'] = datetime.fromisoformat(notif['created_at'])
     
     return [NotificationResponse(**notif) for notif in notifications]
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: str, admin: dict = Depends(get_admin_user)):
+    result = await db.notifications.delete_one({"id": notification_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification deleted successfully"}
 
 # Gallery endpoints
 @api_router.post("/gallery", response_model=GalleryImageResponse)
@@ -545,24 +723,211 @@ async def startup_event():
         }
         await db.users.insert_one(admin_data)
         logging.info("Default admin created: admin@utsah.com / Admin@123")
+    
+    # Auto-seed Anwesh Events
+    try:
+        from anwesh_data import EVENTS
+        for event_data in EVENTS:
+            event_id = f"{event_data['sub_fest']}-{event_data['name']}".replace(" ", "-").lower()
+            existing_event = await db.events.find_one({"id": event_id})
+            if not existing_event:
+                event_dict = event_data.copy()
+                event_dict['id'] = event_id
+                event_dict['registered_count'] = 0
+                event_dict['is_active'] = True
+                event_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+                event_dict['max_events_per_student'] = 3
+                await db.events.insert_one(event_dict)
+                logging.info(f"Seeded event: {event_data['name']}")
+    except Exception as e:
+        logging.error(f"Error seeding events: {e}")
+
+    # Auto-seed Akanksha Events
+    try:
+        from akanksha_data import EVENTS as AKANKSHA_EVENTS
+        for event_data in AKANKSHA_EVENTS:
+            event_id = f"{event_data['sub_fest']}-{event_data['name']}".replace(" ", "-").lower()
+            existing_event = await db.events.find_one({"id": event_id})
+            if not existing_event:
+                event_dict = event_data.copy()
+                event_dict['id'] = event_id
+                event_dict['registered_count'] = 0
+                event_dict['is_active'] = True
+                event_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+                event_dict['max_events_per_student'] = 2
+                # Ensure date fields are isoformatted
+                if isinstance(event_dict['registration_deadline'], str) and 'T' not in event_dict['registration_deadline']:
+                     # Parse simple date strings if needed or just trust the seed file is ISO
+                     pass
+
+                await db.events.insert_one(event_dict)
+                logging.info(f"Seeded event: {event_data['name']}")
+    except Exception as e:
+        logging.error(f"Error seeding Akanksha events: {e}")
+
+# System Data Endpoints
+class CoordinatorInfo(BaseModel):
+    event: str
+    faculty: List[Dict[str, str]]
+    students: List[Dict[str, str]]
+
+class ScheduleItem(BaseModel):
+    date: str
+    time: str
+    venue: str
+    event: str
+    faculty_in_charge: Optional[str] = None
+
+class SystemData(BaseModel):
+    rules: List[str]
+    additional_rules: List[str]
+    schedule: List[ScheduleItem]
+    coordinators: List[CoordinatorInfo]
+
+@api_router.get("/system/coordinators", response_model=SystemData)
+async def get_coordinator_data():
+    data = await db.system.find_one({"type": "coordinator_data"}, {"_id": 0})
+    if not data:
+        # Default/Seed Data
+        default_data = {
+            "type": "coordinator_data",
+            "rules": [
+                "REGISTER ONLY THROUGH THE WEBSITE 'UTSAH2026' (utsah.in).",
+                "Registration opens FROM 24 JAN 2026 from 7pm to 27 JAN 2026 till 10 am (*No on spot registration allowed).",
+                "One student can REGISTER in maximum two events out of the followings.",
+                "Anyone not participating in the audition won't be allowed to participate in the events.",
+                "Mere participation in the audition does not confirm to be a part of the final event on-stage.",
+                "College uniform is mandatory for all participants during audition.",
+                "Decisions of jury members are final.",
+                "All Faculty Members who are a part of the Cultural Society are requested to reach the venue by 10AM.",
+                "All the student coordinators for audition need to contact the respective faculty in-charge."
+            ],
+            "additional_rules": [
+                "Students for audition in Song and Dance are required to select their own song/track and bring them for the audition.",
+                "Students for audition in Anchoring need to come prepared with a script of at least TWO mins.",
+                "Singers will be allowed to sing duet or solo during the function days.",
+                "Students interested in participating in Odissi dance can come prepared with an Odissi song for themselves."
+            ],
+            "schedule": [
+                {"date": "28.01.2026", "time": "10AM", "venue": "W103", "event": "SONG"},
+                {"date": "28.01.2026", "time": "10AM", "venue": "W202", "event": "ANCHORING"},
+                {"date": "28.01.2026", "time": "10AM", "venue": "DANCE FLOOR", "event": "DANCE"},
+                {"date": "28.01.2026", "time": "10AM", "venue": "MBA AUDITORIUM", "event": "FASHION SHOW"},
+                {"date": "28.01.2026", "time": "2:30PM", "venue": "LIBRARY", "event": "DRAMA"}
+            ],
+            "coordinators": [
+                {
+                    "event": "ANCHORING",
+                    "faculty": [
+                        {"name": "DR. L.D. THOMAS", "dept": "BS&H", "phone": "9938513482"},
+                        {"name": "PROF. PRITESH MOHAPATRA", "dept": "BS&H", "phone": "8249395020"},
+                        {"name": "PROF. SOUMYA GOSWAMI", "dept": "CST", "phone": "9861623713"}
+                    ],
+                    "students": [
+                        {"name": "Anshuman Patnaik", "year": "3rd", "phone": "9938074837"},
+                        {"name": "Arpan Gadnayak", "year": "3rd", "phone": "9337281884"}
+                    ]
+                },
+                {
+                    "event": "SONG",
+                    "faculty": [
+                        {"name": "PROF. DIPAK KUMAR SAHU", "dept": "BS&H", "phone": "9437142602"},
+                        {"name": "DR. SUDHIR PANDA", "dept": "CE", "phone": "7846936322"},
+                        {"name": "PROF. BANDITA DASH", "dept": "BS&H", "phone": "9338217050"}
+                    ],
+                    "students": [
+                        {"name": "Anshman Rout", "year": "3rd", "phone": "8658907290"},
+                        {"name": "Smruti Nibedita Sahoo", "year": "3rd", "phone": "8328878351"}
+                    ]
+                },
+                {
+                    "event": "DANCE",
+                    "faculty": [
+                        {"name": "DR. SUSHMITA DASH", "dept": "ME", "phone": "8895435809"},
+                        {"name": "DR. CHANDRIKA SAMAL", "dept": "ME", "phone": "9861950057"},
+                        {"name": "MR. SUBHAM PADHY", "dept": "CE (Lab I/O)", "phone": "8280244918"},
+                        {"name": "MR. TAPAS MOHARANA", "dept": "CSE (T.A.)", "phone": "8637279570"}
+                    ],
+                    "students": [
+                        {"name": "Poonam Hati", "year": "3rd", "phone": "6371842562"},
+                        {"name": "Kiranbala sahoo", "year": "3rd", "phone": "8249237202"},
+                        {"name": "Akash Mohapatra", "year": "2nd", "phone": "8093720948"},
+                        {"name": "Baishnabi Mishra", "year": "3rd", "phone": "6372298232"},
+                        {"name": "Adwitiya Swayamsamparna", "year": "2nd", "phone": "9337027186"},
+                        {"name": "Ankita Ghosh", "year": "3rd", "phone": "6370807987"}
+                    ]
+                },
+                {
+                    "event": "FASHION SHOW",
+                    "faculty": [
+                        {"name": "PROF. SUBHA R. DAS", "dept": "CSIT", "phone": "9337433945"},
+                        {"name": "PROF. MANOJ K. SAHOO", "dept": "CSE", "phone": "9040146664"},
+                        {"name": "PROF. LAXMI NARAYAN DASH", "dept": "CST", "phone": "7008862216"},
+                        {"name": "PROF. RAMSHANKAR PRADHAN", "dept": "PHY", "phone": "9776932703"},
+                        {"name": "PROF. PRIYATAMA MOHARANA", "dept": "CSE-AIML", "phone": "7978722903"},
+                        {"name": "PROF. RAJALAXMI SAHOO", "dept": "MCA", "phone": "8984617506"},
+                        {"name": "MR. ASHUTOSH PATNAIK", "dept": "ADM, SEC", "phone": "7381052524"}
+                    ],
+                    "students": [
+                        {"name": "JayanarayanPanda", "year": "3rd", "phone": "7846803792"},
+                        {"name": "SoumyaRanjanBehera", "year": "3rd", "phone": "9090407789"},
+                        {"name": "Badal Nayak", "year": "3rd", "phone": "8260266125"}
+                    ]
+                },
+                {
+                    "event": "DRAMA",
+                    "faculty": [
+                        {"name": "DR. BRDARATA DASH", "dept": "LIBRARIAN", "phone": "9437228797"},
+                        {"name": "DR. RASABIHARI MISHRA", "dept": "BSH", "phone": "9937993373"}
+                    ],
+                    "students": [
+                        {"name": "Somnath Behera", "year": "3rd", "phone": "6371976033"}
+                    ]
+                },
+                {
+                    "event": "ALL EVENT COORDINATOR",
+                    "faculty": [
+                        {"name": "PROF. CHINMAYANANDA SAHOO", "dept": "CE", "phone": "8249556490"}
+                    ],
+                    "students": [
+                        {"name": "Tripti Kumari", "year": "1st", "phone": "9430751385"},
+                        {"name": "Prithviraj Das", "year": "3rd", "phone": "7008264556"}
+                    ]
+                },
+                {
+                    "event": "PRACTICE COORDINATION",
+                    "faculty": [
+                        {"name": "DR. RASHA BIHARI MISHRA", "dept": "BS&H", "phone": "8260045022"},
+                        {"name": "PROF. AMIT KUMAR DEHURY", "dept": "ME", "phone": "9438138185"},
+                        {"name": "PROF. SIBAKANTA SAHU", "dept": "ME", "phone": "8895988888"},
+                        {"name": "PROF. SUJIT KHANDAI", "dept": "EE", "phone": "9777722770"},
+                        {"name": "PROF. PRITISH BHANJA", "dept": "BS&H", "phone": "7377123101"},
+                        {"name": "DR. SASWATI SAHOO", "dept": "CSE", "phone": "-"}
+                    ],
+                    "students": []
+                }
+            ]
+        }
+        await db.system.insert_one(default_data)
+        return SystemData(**default_data)
+    
+    return SystemData(**data)
+
+@api_router.post("/system/coordinators", response_model=SystemData)
+async def update_coordinator_data(data: SystemData, admin: dict = Depends(get_admin_user)):
+    data_dict = data.model_dump()
+    data_dict['type'] = "coordinator_data"
+    
+    await db.system.replace_one({"type": "coordinator_data"}, data_dict, upsert=True)
+    return data
 
 # Include the router in the main app
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
