@@ -103,8 +103,9 @@ const StudentDashboard = () => {
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#ec4899]"
+              className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-[#d946ef] to-[#ec4899] cursor-pointer hover:opacity-80 transition-opacity"
               data-testid="dashboard-title"
+              onClick={() => navigate('/')}
             >
               UTSAH
             </motion.h1>
