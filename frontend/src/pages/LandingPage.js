@@ -149,13 +149,16 @@ const LandingPage = () => {
             transition={{ delay: 1, duration: 0.8 }}
             className="flex flex-col sm:flex-row gap-6 justify-center items-center"
           >
-            <button
-              onClick={() => navigate('/register')}
-              className="group relative px-8 py-4 bg-white text-black font-bold uppercase tracking-widest overflow-hidden hover:scale-105 transition-transform duration-300"
-            >
-              <span className="relative z-10 flex items-center gap-2">Register Now <ArrowRight className="w-4 h-4" /></span>
-              <div className="absolute inset-0 bg-[#d946ef] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
-            </button>
+            {!user && (
+              <button
+                onClick={() => navigate('/register')}
+                className="group relative px-8 py-4 bg-white text-black font-bold uppercase tracking-widest overflow-hidden hover:scale-105 transition-transform duration-300"
+              >
+                <span className="relative z-10 flex items-center gap-2">Register Now <ArrowRight className="w-4 h-4" /></span>
+                <div className="absolute inset-0 bg-[#d946ef] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
+              </button>
+            )}
+
             <button
               onClick={() => document.getElementById('about').scrollIntoView({ behavior: 'smooth' })}
               className="px-8 py-4 border border-white/20 text-white font-bold uppercase tracking-widest hover:bg-white/5 transition-colors"
@@ -319,12 +322,14 @@ const LandingPage = () => {
           <p className="text-xl text-gray-300 mb-8">
             Registrations are filling up fast. Don't miss your chance to be part of history.
           </p>
-          <button
-            onClick={() => navigate('/register')}
-            className="px-12 py-5 bg-white text-black text-xl font-bold uppercase tracking-widest hover:scale-105 transition-transform"
-          >
-            Get Your Pass
-          </button>
+          {!user && (
+            <button
+              onClick={() => navigate('/register')}
+              className="px-12 py-5 bg-white text-black text-xl font-bold uppercase tracking-widest hover:scale-105 transition-transform"
+            >
+              Get Your Pass
+            </button>
+          )}
         </motion.div>
       </section>
 
