@@ -20,6 +20,7 @@ import CoordinatorsPage from './pages/CoordinatorsPage';
 
 // Components
 import LoadingScreen from './components/LoadingScreen/LoadingScreen';
+import NotificationPopup from './components/NotificationPopup/NotificationPopup';
 
 // Auth context
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -104,6 +105,7 @@ function App() {
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>
+        {!isLoading && <NotificationPopup />}
         <Toaster position="top-right" richColors />
       </div>
     </AuthProvider>
