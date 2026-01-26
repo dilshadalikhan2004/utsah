@@ -369,7 +369,7 @@ const AdminDashboard = () => {
     if (!window.confirm("Are you sure you want to delete this registration? This cannot be undone.")) return;
 
     try {
-      await axios.delete(`${API_URL}/registrations/${registrationId}`, {
+      await axios.delete(`${API_URL}/registrations/${encodeURIComponent(registrationId)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Registration deleted");
