@@ -576,7 +576,7 @@ async def export_registrations(event_id: Optional[str] = None, admin: dict = Dep
     writer = csv.writer(output)
     
     # Headers
-    headers = ["Registration ID", "Event", "Sub-Fest", "Date", "Full Name", "Roll No", "Dept", "Year", "Mobile", "Email", "Team Members"]
+    headers = ["Full Name", "Event", "Sub-Fest", "Date", "Roll No", "Dept", "Year", "Mobile", "Email", "Team Members"]
     writer.writerow(headers)
     
     for reg in registrations:
@@ -597,11 +597,10 @@ async def export_registrations(event_id: Optional[str] = None, admin: dict = Dep
             team_str = "; ".join([f"{m['full_name']} ({m['roll_number']})" for m in reg['team_members']])
             
         writer.writerow([
-            reg.get('id', ''),
+            reg.get('full_name', ''),
             reg.get('event_name', ''),
             reg.get('sub_fest', ''),
             reg.get('registered_at', ''),
-            reg.get('full_name', ''),
             reg.get('roll_number', ''),
             reg.get('department', ''),
             reg.get('year', ''),
@@ -609,6 +608,7 @@ async def export_registrations(event_id: Optional[str] = None, admin: dict = Dep
             reg.get('student_email', ''),
             team_str
         ])
+
         
     output.seek(0)
     filename = f"registrations_{event_id}.csv" if event_id else "all_registrations.csv"
