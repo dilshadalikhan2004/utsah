@@ -97,10 +97,11 @@ const AdminDashboard = () => {
       const payload = {
         ...eventForm,
         coordinators: eventForm.coordinators.filter(c => c.trim() !== ''),
-        registration_deadline: eventForm.registration_deadline ? new Date(eventForm.registration_deadline).toISOString() : new Date().toISOString(),
+        // Default to far future deadline if not set, as user relies on manual toggle
+        registration_deadline: eventForm.registration_deadline ? new Date(eventForm.registration_deadline).toISOString() : '2099-12-31T23:59:59.000Z',
         venue: 'TBD',
         timing: 'TBD',
-        capacity: 100
+        capacity: 10000
       };
 
       if (editingEventId) {
@@ -115,9 +116,8 @@ const AdminDashboard = () => {
         toast.success('Event created successfully!');
       }
 
-      setShowEventForm(false);
-      setEditingEventId(null);
-      fetchData();
+      // Force reload to ensure fresh data
+      window.location.reload();
       setEventForm({
         name: '',
         description: '',
@@ -138,6 +138,14 @@ const AdminDashboard = () => {
   };
 
   const handleEditClick = (event) => {
+    // Helper to format ISO date to local datetime-local string
+    const formatToLocalDatetime = (isoString) => {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      const offset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+    };
+
     setEventForm({
       name: event.name,
       description: event.description,
@@ -146,7 +154,7 @@ const AdminDashboard = () => {
       coordinators: event.coordinators,
       timing: event.timing || '',
       venue: event.venue || '',
-      registration_deadline: event.registration_deadline ? event.registration_deadline.slice(0, 16) : '',
+      registration_deadline: formatToLocalDatetime(event.registration_deadline),
       capacity: event.capacity || 50,
       min_team_size: event.min_team_size || 1,
       max_team_size: event.max_team_size || 1,
@@ -157,15 +165,30 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteEvent = async (eventId) => {
-    if (!window.confirm('Are you sure you want to disable this event?')) return;
+    if (!window.confirm('Are you sure you want to permanently delete this event? This action cannot be undone.')) return;
     try {
       await axios.delete(`${API_URL}/events/${eventId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Event disabled');
+      toast.success('Event deleted successfully');
       fetchData();
     } catch (error) {
-      toast.error('Failed to disable event');
+      toast.error('Failed to delete event');
+    }
+  };
+
+  const handleToggleRegistration = async (event) => {
+    try {
+      const newStatus = !event.is_registration_open;
+      await axios.put(`${API_URL}/events/${event.id}`, {
+        is_registration_open: newStatus
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`Registration ${newStatus ? 'opened' : 'closed'} successfully`);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to update registration status');
     }
   };
 
@@ -564,6 +587,7 @@ const AdminDashboard = () => {
                               <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Type</th>
                               <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Registrations</th>
                               <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Status</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Reg. Status</th>
                               <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Actions</th>
                             </tr>
                           </thead>
@@ -583,6 +607,17 @@ const AdminDashboard = () => {
                                     }`}>
                                     {event.is_active ? 'Active' : 'Inactive'}
                                   </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <button
+                                    onClick={() => handleToggleRegistration(event)}
+                                    className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded border hover:bg-opacity-20 transition-colors ${event.is_registration_open
+                                      ? 'bg-blue-500/20 text-blue-500 border-blue-500/30'
+                                      : 'bg-gray-500/20 text-gray-500 border-gray-500/30'
+                                      }`}
+                                  >
+                                    {event.is_registration_open ? 'Open' : 'Closed'}
+                                  </button>
                                 </td>
                                 <td className="px-6 py-4">
                                   <div className="flex gap-2">
@@ -628,362 +663,393 @@ const AdminDashboard = () => {
             </div>
           )}
         </motion.div>
-      </div>
+      </div >
 
       {/* Event Form Modal */}
-      {showEventForm && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="event-form-modal">
-          <div className="glass p-8 rounded-none max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setShowEventForm(false)}
-              className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-            <h2 className="text-3xl font-black mb-6">{editingEventId ? 'Edit Event' : 'Create New Event'}</h2>
-            <form onSubmit={handleCreateEvent} className="space-y-4">
-              <input
-                type="text"
-                placeholder="Event Name"
-                value={eventForm.name}
-                onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
-                className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                required
-                data-testid="event-name-input"
-              />
-              <textarea
-                placeholder="Description"
-                value={eventForm.description}
-                onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
-                className="w-full bg-transparent border border-white/20 focus:border-white/80 px-4 py-3 text-white min-h-24"
-                data-testid="event-description-input"
-              />
-              <select
-                value={eventForm.sub_fest}
-                onChange={(e) => setEventForm({ ...eventForm, sub_fest: e.target.value })}
-                className="w-full bg-[#0f172a] border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                data-testid="event-subfest-select"
+      {
+        showEventForm && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="event-form-modal">
+            <div className="glass p-8 rounded-none max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <button
+                onClick={() => setShowEventForm(false)}
+                className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
               >
-                <option value="CULTURAL-AKANKSHA">CULTURAL - AKANKSHA</option>
-                <option value="SPORTS-AHWAAN">SPORTS - AHWAAN</option>
-                <option value="TECHNOLOGY-ANWESH">TECHNOLOGY - ANWESH</option>
-              </select>
-              <select
-                value={eventForm.event_type}
-                onChange={(e) => setEventForm({ ...eventForm, event_type: e.target.value })}
-                className="w-full bg-[#0f172a] border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                data-testid="event-type-select"
-              >
-                <option value="individual">Individual</option>
-                <option value="team">Team</option>
-              </select>
-
-              <div className="text-gray-400 text-sm mt-2 mb-1">Registration Deadline</div>
-              <input
-                type="datetime-local"
-                value={eventForm.registration_deadline}
-                onChange={(e) => setEventForm({ ...eventForm, registration_deadline: e.target.value })}
-                className="w-full bg-[#0f172a] border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                data-testid="event-deadline-input"
-              />
-
-              <div className="flex gap-4 justify-end pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEventForm(false)}
-                  className="px-6 py-3 glass hover:bg-white/10"
-                  data-testid="cancel-event-button"
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back</span>
+              </button>
+              <h2 className="text-3xl font-black mb-6">{editingEventId ? 'Edit Event' : 'Create New Event'}</h2>
+              <form onSubmit={handleCreateEvent} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Event Name"
+                  value={eventForm.name}
+                  onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                  required
+                  data-testid="event-name-input"
+                />
+                <textarea
+                  placeholder="Description"
+                  value={eventForm.description}
+                  onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                  className="w-full bg-transparent border border-white/20 focus:border-white/80 px-4 py-3 text-white min-h-24"
+                  data-testid="event-description-input"
+                />
+                <select
+                  value={eventForm.sub_fest}
+                  onChange={(e) => setEventForm({ ...eventForm, sub_fest: e.target.value })}
+                  className="w-full bg-[#0f172a] border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                  data-testid="event-subfest-select"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider"
-                  data-testid="submit-event-button"
+                  <option value="CULTURAL-AKANKSHA">CULTURAL - AKANKSHA</option>
+                  <option value="SPORTS-AHWAAN">SPORTS - AHWAAN</option>
+                  <option value="TECHNOLOGY-ANWESH">TECHNOLOGY - ANWESH</option>
+                </select>
+                <select
+                  value={eventForm.event_type}
+                  onChange={(e) => setEventForm({ ...eventForm, event_type: e.target.value })}
+                  className="w-full bg-[#0f172a] border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                  data-testid="event-type-select"
                 >
-                  {editingEventId ? 'Update Event' : 'Create Event'}
-                </button>
-              </div>
-            </form>
+                  <option value="individual">Individual</option>
+                  <option value="team">Team</option>
+                </select>
+
+
+
+                <div className="grid grid-cols-2 gap-4">
+
+                  {eventForm.event_type === 'team' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-gray-400 text-xs mb-1">Min Team</div>
+                        <input
+                          type="number"
+                          value={eventForm.min_team_size}
+                          onChange={(e) => setEventForm({ ...eventForm, min_team_size: parseInt(e.target.value) })}
+                          className="w-full bg-transparent border-b border-white/20 focus:border-white/80 py-3 text-white text-center"
+                        />
+                      </div>
+                      <div>
+                        <div className="text-gray-400 text-xs mb-1">Max Team</div>
+                        <input
+                          type="number"
+                          value={eventForm.max_team_size}
+                          onChange={(e) => setEventForm({ ...eventForm, max_team_size: parseInt(e.target.value) })}
+                          className="w-full bg-transparent border-b border-white/20 focus:border-white/80 py-3 text-white text-center"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+
+
+                <div className="flex gap-4 justify-end pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEventForm(false)}
+                    className="px-6 py-3 glass hover:bg-white/10"
+                    data-testid="cancel-event-button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider"
+                    data-testid="submit-event-button"
+                  >
+                    {editingEventId ? 'Update Event' : 'Create Event'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Notification Form Modal */}
-      {showNotifForm && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="notification-form-modal">
-          <div className="glass p-8 rounded-none max-w-2xl w-full">
-            <h2 className="text-3xl font-black mb-6">Create Notification</h2>
-            <form onSubmit={handleCreateNotification} className="space-y-4">
-              <input
-                type="text"
-                placeholder="Title"
-                value={notifForm.title}
-                onChange={(e) => setNotifForm({ ...notifForm, title: e.target.value })}
-                className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                required
-                data-testid="notification-title-input"
-              />
-              <textarea
-                placeholder="Message"
-                value={notifForm.message}
-                onChange={(e) => setNotifForm({ ...notifForm, message: e.target.value })}
-                className="w-full bg-transparent border border-white/20 focus:border-white/80 px-4 py-3 text-white min-h-32"
-                required
-                data-testid="notification-message-input"
-              />
-              <input
-                type="url"
-                placeholder="Image URL (optional)"
-                value={notifForm.image_url}
-                onChange={(e) => setNotifForm({ ...notifForm, image_url: e.target.value })}
-                className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
-                data-testid="notification-image-input"
-              />
+      {
+        showNotifForm && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="notification-form-modal">
+            <div className="glass p-8 rounded-none max-w-2xl w-full">
+              <h2 className="text-3xl font-black mb-6">Create Notification</h2>
+              <form onSubmit={handleCreateNotification} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Title"
+                  value={notifForm.title}
+                  onChange={(e) => setNotifForm({ ...notifForm, title: e.target.value })}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                  required
+                  data-testid="notification-title-input"
+                />
+                <textarea
+                  placeholder="Message"
+                  value={notifForm.message}
+                  onChange={(e) => setNotifForm({ ...notifForm, message: e.target.value })}
+                  className="w-full bg-transparent border border-white/20 focus:border-white/80 px-4 py-3 text-white min-h-32"
+                  required
+                  data-testid="notification-message-input"
+                />
+                <input
+                  type="url"
+                  placeholder="Image URL (optional)"
+                  value={notifForm.image_url}
+                  onChange={(e) => setNotifForm({ ...notifForm, image_url: e.target.value })}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white"
+                  data-testid="notification-image-input"
+                />
 
-              <div className="mt-8 border-t border-white/10 pt-6">
-                <h3 className="text-xl font-bold mb-4">Existing Notifications</h3>
-                {notifications.length === 0 ? (
-                  <p className="text-gray-400">No active notifications.</p>
-                ) : (
-                  <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-                    {notifications.map(notif => (
-                      <div key={notif.id} className="glass p-4 rounded-none flex justify-between items-start gap-4">
+                <div className="mt-8 border-t border-white/10 pt-6">
+                  <h3 className="text-xl font-bold mb-4">Existing Notifications</h3>
+                  {notifications.length === 0 ? (
+                    <p className="text-gray-400">No active notifications.</p>
+                  ) : (
+                    <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                      {notifications.map(notif => (
+                        <div key={notif.id} className="glass p-4 rounded-none flex justify-between items-start gap-4">
+                          <div>
+                            <h4 className="font-bold">{notif.title}</h4>
+                            <p className="text-sm text-gray-400 line-clamp-2">{notif.message}</p>
+                            <span className="text-xs text-gray-500">{new Date(notif.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteNotification(notif.id)}
+                            className="text-red-400 hover:text-red-300 p-1"
+                            title="Delete Notification"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-4 justify-end pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotifForm(false)}
+                    className="px-6 py-3 glass hover:bg-white/10"
+                    data-testid="cancel-notification-button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider"
+                    data-testid="submit-notification-button"
+                  >
+                    Publish
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Shortlist Upload Modal */}
+      {
+        showShortlistUpload && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="shortlist-upload-modal">
+            <div className="glass p-8 rounded-none max-w-md w-full">
+              <h2 className="text-3xl font-black mb-6">Upload Shortlist</h2>
+              <p className="text-gray-400 mb-6">Upload an Excel file with columns: name, roll_number, department, status</p>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleShortlistUpload}
+                className="w-full text-white"
+                data-testid="shortlist-file-input"
+              />
+              <button
+                onClick={() => setShowShortlistUpload(false)}
+                className="mt-6 w-full px-6 py-3 glass hover:bg-white/10"
+                data-testid="cancel-shortlist-button"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Registrations Modal */}
+      {
+        showRegistrationsModal && selectedEventRegistrations && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="registrations-modal">
+            <div className="glass p-8 rounded-none max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-3xl font-black">{selectedEventRegistrations.event.name}</h2>
+                  <p className="text-gray-400 mt-2">
+                    Total Registrations: {selectedEventRegistrations.registrations.length}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowRegistrationsModal(false)}
+                  className="px-6 py-3 glass hover:bg-white/10"
+                  data-testid="close-registrations-modal"
+                >
+                  Close
+                </button>
+              </div>
+
+              {selectedEventRegistrations.registrations.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">No registrations yet</div>
+              ) : (
+                <div className="space-y-6">
+                  {selectedEventRegistrations.registrations.map((reg, idx) => (
+                    <div key={reg.id} className="glass p-6 rounded-none border border-white/10">
+                      <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h4 className="font-bold">{notif.title}</h4>
-                          <p className="text-sm text-gray-400 line-clamp-2">{notif.message}</p>
-                          <span className="text-xs text-gray-500">{new Date(notif.created_at).toLocaleDateString()}</span>
+                          <h3 className="text-xl font-bold">Registration #{idx + 1}</h3>
+                          <p className="text-sm text-gray-400 mt-1">
+                            Registered by: {reg.student_email}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Date: {new Date(reg.registered_at).toLocaleString('en-IN')}
+                          </p>
                         </div>
                         <button
-                          type="button"
-                          onClick={() => handleDeleteNotification(notif.id)}
-                          className="text-red-400 hover:text-red-300 p-1"
-                          title="Delete Notification"
+                          onClick={() => handleDeleteRegistration(reg.id)}
+                          className="p-2 glass hover:bg-red-500/20 text-red-400 transition-colors"
+                          title="Delete Registration"
                         >
                           <Trash className="w-4 h-4" />
                         </button>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-4 justify-end pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowNotifForm(false)}
-                  className="px-6 py-3 glass hover:bg-white/10"
-                  data-testid="cancel-notification-button"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider"
-                  data-testid="submit-notification-button"
-                >
-                  Publish
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Shortlist Upload Modal */}
-      {showShortlistUpload && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="shortlist-upload-modal">
-          <div className="glass p-8 rounded-none max-w-md w-full">
-            <h2 className="text-3xl font-black mb-6">Upload Shortlist</h2>
-            <p className="text-gray-400 mb-6">Upload an Excel file with columns: name, roll_number, department, status</p>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleShortlistUpload}
-              className="w-full text-white"
-              data-testid="shortlist-file-input"
-            />
-            <button
-              onClick={() => setShowShortlistUpload(false)}
-              className="mt-6 w-full px-6 py-3 glass hover:bg-white/10"
-              data-testid="cancel-shortlist-button"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+                      {/* Individual Event */}
+                      {!reg.team_members && (
+                        <div className="glass p-4 rounded-none">
+                          <p className="text-sm text-gray-400 mb-2">Individual Participant</p>
+                          <p className="font-medium">{reg.student_email}</p>
+                        </div>
+                      )}
 
-      {/* Registrations Modal */}
-      {showRegistrationsModal && selectedEventRegistrations && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="registrations-modal">
-          <div className="glass p-8 rounded-none max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-3xl font-black">{selectedEventRegistrations.event.name}</h2>
-                <p className="text-gray-400 mt-2">
-                  Total Registrations: {selectedEventRegistrations.registrations.length}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowRegistrationsModal(false)}
-                className="px-6 py-3 glass hover:bg-white/10"
-                data-testid="close-registrations-modal"
-              >
-                Close
-              </button>
-            </div>
-
-            {selectedEventRegistrations.registrations.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">No registrations yet</div>
-            ) : (
-              <div className="space-y-6">
-                {selectedEventRegistrations.registrations.map((reg, idx) => (
-                  <div key={reg.id} className="glass p-6 rounded-none border border-white/10">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold">Registration #{idx + 1}</h3>
-                        <p className="text-sm text-gray-400 mt-1">
-                          Registered by: {reg.student_email}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          Date: {new Date(reg.registered_at).toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteRegistration(reg.id)}
-                        className="p-2 glass hover:bg-red-500/20 text-red-400 transition-colors"
-                        title="Delete Registration"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Individual Event */}
-                    {!reg.team_members && (
-                      <div className="glass p-4 rounded-none">
-                        <p className="text-sm text-gray-400 mb-2">Individual Participant</p>
-                        <p className="font-medium">{reg.student_email}</p>
-                      </div>
-                    )}
-
-                    {/* Team Event */}
-                    {reg.team_members && reg.team_members.length > 0 && (
-                      <div>
-                        <p className="text-sm text-gray-400 mb-3 font-medium">
-                          Team Members ({reg.team_members.length}):
-                        </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {reg.team_members.map((member, mIdx) => (
-                            <div key={mIdx} className="glass p-4 rounded-none border border-white/5">
-                              <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-bold text-lg">{member.full_name}</h4>
-                                <span className="text-xs px-2 py-1 bg-white/10 rounded">
-                                  Member {mIdx + 1}
-                                </span>
-                              </div>
-                              <div className="space-y-1 text-sm">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <span className="text-gray-500">Roll:</span>
-                                    <span className="ml-2 text-gray-300">{member.roll_number}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-500">Year:</span>
-                                    <span className="ml-2 text-gray-300">{member.year}</span>
-                                  </div>
-                                  <div className="col-span-2">
-                                    <span className="text-gray-500">Dept:</span>
-                                    <span className="ml-2 text-gray-300">{member.department}</span>
-                                  </div>
-                                  <div className="col-span-2">
-                                    <span className="text-gray-500">Mobile:</span>
-                                    <span className="ml-2 text-gray-300">{member.mobile_number}</span>
-                                  </div>
-                                  <div className="col-span-2">
-                                    <span className="text-gray-500">Email:</span>
-                                    <span className="ml-2 text-gray-300 break-all">{member.email}</span>
+                      {/* Team Event */}
+                      {reg.team_members && reg.team_members.length > 0 && (
+                        <div>
+                          <p className="text-sm text-gray-400 mb-3 font-medium">
+                            Team Members ({reg.team_members.length}):
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {reg.team_members.map((member, mIdx) => (
+                              <div key={mIdx} className="glass p-4 rounded-none border border-white/5">
+                                <div className="flex justify-between items-start mb-2">
+                                  <h4 className="font-bold text-lg">{member.full_name}</h4>
+                                  <span className="text-xs px-2 py-1 bg-white/10 rounded">
+                                    Member {mIdx + 1}
+                                  </span>
+                                </div>
+                                <div className="space-y-1 text-sm">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <span className="text-gray-500">Roll:</span>
+                                      <span className="ml-2 text-gray-300">{member.roll_number}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">Year:</span>
+                                      <span className="ml-2 text-gray-300">{member.year}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-gray-500">Dept:</span>
+                                      <span className="ml-2 text-gray-300">{member.department}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-gray-500">Mobile:</span>
+                                      <span className="ml-2 text-gray-300">{member.mobile_number}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-gray-500">Email:</span>
+                                      <span className="ml-2 text-gray-300 break-all">{member.email}</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
 
       {/* Coordinator Manager Modal */}
-      {showCoordinatorManager && coordinatorData && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="coordinator-manager-modal">
-          <div className="glass p-8 rounded-none max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-3xl font-black mb-6">Manage Coordinators</h2>
+      {
+        showCoordinatorManager && coordinatorData && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="coordinator-manager-modal">
+            <div className="glass p-8 rounded-none max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <h2 className="text-3xl font-black mb-6">Manage Coordinators</h2>
 
-            <div className="space-y-6">
-              {coordinatorData.coordinators.map((group, gIdx) => (
-                <div key={gIdx} className="glass p-6 border border-white/20">
-                  <div className="flex justify-between items-center mb-4">
-                    <input
-                      type="text"
-                      value={group.event}
-                      onChange={(e) => updateCoordinatorGroup(gIdx, 'event', e.target.value)}
-                      className="text-xl font-bold bg-transparent border-b border-transparent focus:border-white outline-none w-1/2 p-2"
-                      placeholder="Event Name"
-                    />
-                    <button onClick={() => removeCoordinatorGroup(gIdx)} className="text-red-400 text-sm hover:text-red-300">Remove Group</button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Faculty */}
-                    <div>
-                      <h4 className="font-bold text-lg mb-2 text-[#d946ef]">Faculty</h4>
-                      {group.faculty.map((fac, fIdx) => (
-                        <div key={fIdx} className="flex gap-2 mb-2 items-center">
-                          <input type="text" placeholder="Name" className="bg-white/5 p-2 w-1/3 text-sm focus:outline-none focus:bg-white/10" value={fac.name} onChange={(e) => updateFaculty(gIdx, fIdx, 'name', e.target.value)} />
-                          <input type="text" placeholder="Dept" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={fac.dept} onChange={(e) => updateFaculty(gIdx, fIdx, 'dept', e.target.value)} />
-                          <input type="text" placeholder="Phone" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={fac.phone} onChange={(e) => updateFaculty(gIdx, fIdx, 'phone', e.target.value)} />
-                          <button onClick={() => removeFaculty(gIdx, fIdx)} className="text-red-400 hover:text-red-300 px-2">×</button>
-                        </div>
-                      ))}
-                      <button onClick={() => addFaculty(gIdx)} className="text-sm text-[#d946ef] mt-2 hover:text-[#ec4899]">+ Add Faculty</button>
+              <div className="space-y-6">
+                {coordinatorData.coordinators.map((group, gIdx) => (
+                  <div key={gIdx} className="glass p-6 border border-white/20">
+                    <div className="flex justify-between items-center mb-4">
+                      <input
+                        type="text"
+                        value={group.event}
+                        onChange={(e) => updateCoordinatorGroup(gIdx, 'event', e.target.value)}
+                        className="text-xl font-bold bg-transparent border-b border-transparent focus:border-white outline-none w-1/2 p-2"
+                        placeholder="Event Name"
+                      />
+                      <button onClick={() => removeCoordinatorGroup(gIdx)} className="text-red-400 text-sm hover:text-red-300">Remove Group</button>
                     </div>
 
-                    {/* Students */}
-                    <div>
-                      <h4 className="font-bold text-lg mb-2 text-[#06b6d4]">Students</h4>
-                      {group.students.map((stu, sIdx) => (
-                        <div key={sIdx} className="flex gap-2 mb-2 items-center">
-                          <input type="text" placeholder="Name" className="bg-white/5 p-2 w-1/3 text-sm focus:outline-none focus:bg-white/10" value={stu.name} onChange={(e) => updateStudent(gIdx, sIdx, 'name', e.target.value)} />
-                          <input type="text" placeholder="Year" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={stu.year} onChange={(e) => updateStudent(gIdx, sIdx, 'year', e.target.value)} />
-                          <input type="text" placeholder="Phone" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={stu.phone} onChange={(e) => updateStudent(gIdx, sIdx, 'phone', e.target.value)} />
-                          <button onClick={() => removeStudent(gIdx, sIdx)} className="text-red-400 hover:text-red-300 px-2">×</button>
-                        </div>
-                      ))}
-                      <button onClick={() => addStudent(gIdx)} className="text-sm text-[#06b6d4] mt-2 hover:text-[#22d3ee]">+ Add Student</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Faculty */}
+                      <div>
+                        <h4 className="font-bold text-lg mb-2 text-[#d946ef]">Faculty</h4>
+                        {group.faculty.map((fac, fIdx) => (
+                          <div key={fIdx} className="flex gap-2 mb-2 items-center">
+                            <input type="text" placeholder="Name" className="bg-white/5 p-2 w-1/3 text-sm focus:outline-none focus:bg-white/10" value={fac.name} onChange={(e) => updateFaculty(gIdx, fIdx, 'name', e.target.value)} />
+                            <input type="text" placeholder="Dept" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={fac.dept} onChange={(e) => updateFaculty(gIdx, fIdx, 'dept', e.target.value)} />
+                            <input type="text" placeholder="Phone" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={fac.phone} onChange={(e) => updateFaculty(gIdx, fIdx, 'phone', e.target.value)} />
+                            <button onClick={() => removeFaculty(gIdx, fIdx)} className="text-red-400 hover:text-red-300 px-2">×</button>
+                          </div>
+                        ))}
+                        <button onClick={() => addFaculty(gIdx)} className="text-sm text-[#d946ef] mt-2 hover:text-[#ec4899]">+ Add Faculty</button>
+                      </div>
+
+                      {/* Students */}
+                      <div>
+                        <h4 className="font-bold text-lg mb-2 text-[#06b6d4]">Students</h4>
+                        {group.students.map((stu, sIdx) => (
+                          <div key={sIdx} className="flex gap-2 mb-2 items-center">
+                            <input type="text" placeholder="Name" className="bg-white/5 p-2 w-1/3 text-sm focus:outline-none focus:bg-white/10" value={stu.name} onChange={(e) => updateStudent(gIdx, sIdx, 'name', e.target.value)} />
+                            <input type="text" placeholder="Year" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={stu.year} onChange={(e) => updateStudent(gIdx, sIdx, 'year', e.target.value)} />
+                            <input type="text" placeholder="Phone" className="bg-white/5 p-2 w-1/4 text-sm focus:outline-none focus:bg-white/10" value={stu.phone} onChange={(e) => updateStudent(gIdx, sIdx, 'phone', e.target.value)} />
+                            <button onClick={() => removeStudent(gIdx, sIdx)} className="text-red-400 hover:text-red-300 px-2">×</button>
+                          </div>
+                        ))}
+                        <button onClick={() => addStudent(gIdx)} className="text-sm text-[#06b6d4] mt-2 hover:text-[#22d3ee]">+ Add Student</button>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex justify-between items-center pt-6 border-t border-white/10">
+                <button onClick={addCoordinatorGroup} className="px-4 py-2 border border-white/20 hover:bg-white/10 transition-colors pointer-events-auto">+ Add Event Group</button>
+                <div className="flex gap-4">
+                  <button onClick={() => setShowCoordinatorManager(false)} className="px-6 py-3 glass hover:bg-white/10 transition-colors">Cancel</button>
+                  <button onClick={handleSaveCoordinators} className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider transition-colors">Save Changes</button>
                 </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex justify-between items-center pt-6 border-t border-white/10">
-              <button onClick={addCoordinatorGroup} className="px-4 py-2 border border-white/20 hover:bg-white/10 transition-colors pointer-events-auto">+ Add Event Group</button>
-              <div className="flex gap-4">
-                <button onClick={() => setShowCoordinatorManager(false)} className="px-6 py-3 glass hover:bg-white/10 transition-colors">Cancel</button>
-                <button onClick={handleSaveCoordinators} className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider transition-colors">Save Changes</button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 

@@ -299,7 +299,14 @@ const EventDetailsPage = () => {
 
           {/* Registration Button */}
           {/* Registration Button */}
-          {(!event.sub_fest.includes('ANWESH') && !event.sub_fest.includes('AHWAAN')) ? (
+          {!event.is_registration_open ? (
+            <button
+              onClick={() => toast.error("The registration for this event is closed, contact the event coordinator")}
+              className="w-full py-4 font-bold uppercase tracking-wider transition-colors bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+            >
+              Registration Closed
+            </button>
+          ) : (
             <button
               onClick={handleRegister}
               disabled={registering || event.registered_count >= event.capacity}
@@ -310,13 +317,6 @@ const EventDetailsPage = () => {
               data-testid="register-button"
             >
               {registering ? 'Registering...' : event.registered_count >= event.capacity ? 'Event Full' : 'Register Now'}
-            </button>
-          ) : (
-            <button
-              disabled
-              className="w-full py-4 font-bold uppercase tracking-wider transition-colors opacity-50 cursor-not-allowed bg-gray-600"
-            >
-              Registrations Opening Soon
             </button>
           )}
         </motion.div>

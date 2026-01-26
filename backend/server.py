@@ -147,6 +147,7 @@ class EventCreate(BaseModel):
     min_team_size: Optional[int] = 1
     max_team_size: Optional[int] = 1
     max_events_per_student: int = 3
+    is_registration_open: bool = True  # Default to open
 
 class EventResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -162,6 +163,7 @@ class EventResponse(BaseModel):
     capacity: int = 100
     registered_count: int = 0
     is_active: bool = True
+    is_registration_open: bool = True
     min_team_size: int = 1
     max_team_size: int = 1
     max_events_per_student: int = 3
@@ -344,6 +346,11 @@ async def create_event(event: EventCreate, admin: dict = Depends(get_admin_user)
     event_dict['created_at'] = datetime.now(timezone.utc).isoformat()
     event_dict['registration_deadline'] = event.registration_deadline.isoformat()
     
+    # Check for duplicates
+    existing = await db.events.find_one({"id": event_dict['id']})
+    if existing:
+        raise HTTPException(status_code=400, detail="Event with this name already exists in this sub-fest")
+         
     await db.events.insert_one(event_dict)
     
     return EventResponse(**{**event_dict, 'registration_deadline': event.registration_deadline, 'created_at': datetime.fromisoformat(event_dict['created_at'])})
@@ -377,24 +384,7 @@ async def get_event(event_id: str):
     
     return EventResponse(**event)
 
-@api_router.put("/events/{event_id}", response_model=EventResponse)
-async def update_event(event_id: str, event: EventCreate, admin: dict = Depends(get_admin_user)):
-    existing = await db.events.find_one({"id": event_id}, {"_id": 0})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Event not found")
-    
-    event_dict = event.model_dump()
-    event_dict['registration_deadline'] = event.registration_deadline.isoformat()
-    
-    await db.events.update_one({"id": event_id}, {"$set": event_dict})
-    
-    updated = await db.events.find_one({"id": event_id}, {"_id": 0})
-    if isinstance(updated['registration_deadline'], str):
-        updated['registration_deadline'] = datetime.fromisoformat(updated['registration_deadline'])
-    if isinstance(updated['created_at'], str):
-        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
-    
-    return EventResponse(**updated)
+
 
 class EventUpdate(BaseModel):
     name: Optional[str] = None
@@ -410,10 +400,14 @@ class EventUpdate(BaseModel):
     max_team_size: Optional[int] = None
     max_events_per_student: Optional[int] = None
     is_active: Optional[bool] = None
+    is_registration_open: Optional[bool] = None
 
 @api_router.put("/events/{event_id}", response_model=EventResponse)
 async def update_event(event_id: str, updates: EventUpdate, admin: dict = Depends(get_admin_user)):
     # Prepare update data
+    with open("debug_updates.log", "a") as f:
+        f.write(f"Updating {event_id} with: {updates.model_dump_json()}\n")
+
     update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
     
     if not update_data:
@@ -436,11 +430,16 @@ async def update_event(event_id: str, updates: EventUpdate, admin: dict = Depend
     return EventResponse(**updated)
 
 @api_router.delete("/events/{event_id}")
-async def disable_event(event_id: str, admin: dict = Depends(get_admin_user)):
-    result = await db.events.update_one({"id": event_id}, {"$set": {"is_active": False}})
-    if result.modified_count == 0:
+async def delete_event(event_id: str, admin: dict = Depends(get_admin_user)):
+    # Delete the event (use delete_many in case of duplicates)
+    result = await db.events.delete_many({"id": event_id})
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Event not found")
-    return {"message": "Event disabled successfully"}
+    
+    # Also delete associated registrations to maintain clean state
+    await db.registrations.delete_many({"event_id": event_id})
+    
+    return {"message": "Event and associated registrations deleted successfully"}
 
 # Registration endpoints
 @api_router.post("/registrations", response_model=RegistrationResponse)
@@ -456,6 +455,10 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
         deadline = deadline.replace(tzinfo=timezone.utc)
     if datetime.now(timezone.utc) > deadline:
         raise HTTPException(status_code=400, detail="Registration deadline passed")
+    
+    # Check manual registration toggle
+    if not event.get('is_registration_open', True):
+         raise HTTPException(status_code=400, detail="Registration for this event is currently closed by admin")
     
     # Check capacity
     if event['registered_count'] >= event['capacity']:
