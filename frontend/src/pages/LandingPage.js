@@ -3,6 +3,9 @@ import { motion, useScroll, useTransform, useMotionValue, useMotionTemplate } fr
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Calendar, Users, Trophy, ArrowRight, Play, Music, Cpu, Medal, Instagram, MessageCircle, Mail, Code, Crown, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import GridScan from '../components/GridScan/GridScan';
+import ShuffleText from '../components/ShuffleText/ShuffleText';
+import CountUp from '../components/CountUp/CountUp';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -96,6 +99,24 @@ const LandingPage = () => {
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-150 mix-blend-overlay pointer-events-none"></div>
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[length:50px_50px] pointer-events-none" />
 
+        {/* GridScan Animation */}
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <GridScan
+            sensitivity={0.55}
+            lineThickness={1}
+            linesColor="#392e4e"
+            gridScale={0.1}
+            scanColor="#FF9FFC"
+            scanOpacity={0.4}
+            enablePost
+            bloomIntensity={0.6}
+            chromaticAberration={0.002}
+            noiseIntensity={0.01}
+            scanDuration={3.0}
+            scanDelay={1.5}
+          />
+        </div>
+
         {/* Spotlight Effect */}
         <motion.div
           className="pointer-events-none absolute -inset-px rounded-xl opacity-0 transition duration-300 group-hover:opacity-100"
@@ -130,7 +151,12 @@ const LandingPage = () => {
               transition={{ delay: 0.4, duration: 0.8 }}
               className="text-white text-5xl md:text-8xl"
             >
-              2026
+              <ShuffleText
+                text="2026"
+                initialDelay={800}
+                shuffleDuration={40}
+                revealDelay={150}
+              />
             </motion.span>
           </h1>
 
@@ -167,8 +193,6 @@ const LandingPage = () => {
             </button>
           </motion.div>
         </motion.div>
-
-        <FloatingElement icon={Trophy} color="#22c55e" x="80%" y="75%" delay={6} />
       </div>
 
 
@@ -256,7 +280,7 @@ const LandingPage = () => {
               PASSION
             </motion.h2>
             <p className="text-xl text-gray-400 mb-8 leading-relaxed">
-              Experience <span className="font-bold italic text-white">120 hours</span> of non-stop energy, creativity, and competition.
+              Experience <span className="font-bold italic text-white"><CountUp from={0} to={120} duration={2} /> hours</span> of non-stop energy, creativity, and competition.
               UTSAH 2026 brings together the brightest minds and the most talented souls
               for an extravaganza unlike any other.
             </p>
@@ -322,14 +346,7 @@ const LandingPage = () => {
           <p className="text-xl text-gray-300 mb-8">
             Registrations are filling up fast. Don't miss your chance to be part of history.
           </p>
-          {!user && (
-            <button
-              onClick={() => navigate('/register')}
-              className="px-12 py-5 bg-white text-black text-xl font-bold uppercase tracking-widest hover:scale-105 transition-transform"
-            >
-              Get Your Pass
-            </button>
-          )}
+
         </motion.div>
       </section>
 

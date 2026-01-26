@@ -18,11 +18,23 @@ import ShortlistPage from './pages/ShortlistPage';
 import NotificationsPage from './pages/NotificationsPage';
 import CoordinatorsPage from './pages/CoordinatorsPage';
 
+// Components
+import LoadingScreen from './components/LoadingScreen/LoadingScreen';
+
 // Auth context
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function ProtectedRoute({ children, adminOnly = false }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+
+  // Wait for auth state to be determined
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#d946ef] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -57,6 +69,8 @@ function AppRoutes() {
 }
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     // Initialize Lenis smooth scroll
     const lenis = new Lenis({
@@ -81,6 +95,12 @@ function App() {
   return (
     <AuthProvider>
       <div className="App">
+        {isLoading && (
+          <LoadingScreen
+            minDuration={3000}
+            onLoadComplete={() => setIsLoading(false)}
+          />
+        )}
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>
