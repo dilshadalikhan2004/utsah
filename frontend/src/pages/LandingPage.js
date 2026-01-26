@@ -67,7 +67,7 @@ const LandingPage = () => {
                 <p className="text-sm font-bold text-[#d946ef] max-w-[150px] truncate">{user.full_name}</p>
               </div>
               <button
-                onClick={() => navigate('/student')}
+                onClick={() => navigate(user.role === 'admin' ? '/admin' : '/student')}
                 className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-bold uppercase tracking-wider transition-colors rounded-none"
               >
                 <LayoutDashboard className="w-4 h-4" />

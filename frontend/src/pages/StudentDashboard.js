@@ -42,6 +42,10 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     if (user) {
+      if (user.role === 'admin') {
+        navigate('/admin');
+        return;
+      }
       setProfileForm({
         full_name: user.full_name || '',
         department: user.department || '',

@@ -9,8 +9,6 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const GalleryPage = () => {
   const navigate = useNavigate();
-  const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedSubFest, setSelectedSubFest] = useState('ALL');
   const [selectedImage, setSelectedImage] = useState(null);
 
@@ -21,20 +19,31 @@ const GalleryPage = () => {
     { name: 'TECHNOLOGY-ANWESH', color: '#06b6d4' }
   ];
 
-  useEffect(() => {
-    fetchGallery();
-  }, []);
+  // Static list of previous year highlights
+  const previousYearImages = [
+    {
+      id: 1,
+      image_url: "/highlights/img1.jpg", // You need to add these images to public/highlights/
+      caption: "Main Stage Performance",
+      sub_fest: "CULTURAL-AKANKSHA"
+    },
+    {
+      id: 2,
+      image_url: "/highlights/img2.jpg",
+      caption: "Cricket Tournament Finals",
+      sub_fest: "SPORTS-AHWAAN"
+    },
+    {
+      id: 3,
+      image_url: "/highlights/img3.jpg",
+      caption: "Robotics Competition",
+      sub_fest: "TECHNOLOGY-ANWESH"
+    },
+    // Add more placeholder entries as needed for the user to fill in
+  ];
 
-  const fetchGallery = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/gallery`);
-      setImages(response.data);
-    } catch (error) {
-      toast.error('Failed to load gallery');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Simply use the static list
+  const images = previousYearImages;
 
   const filteredImages = selectedSubFest === 'ALL'
     ? images
@@ -65,7 +74,7 @@ const GalleryPage = () => {
             <ImageIcon className="w-12 h-12 text-[#d946ef]" />
             <div>
               <h1 className="text-5xl font-black" data-testid="gallery-title">Gallery</h1>
-              <p className="text-gray-400 mt-2">Relive the magical moments of UTSAH</p>
+              <p className="text-gray-400 mt-2">Highlights from Previous Years</p>
             </div>
           </div>
 
@@ -75,11 +84,10 @@ const GalleryPage = () => {
               <button
                 key={fest.name}
                 onClick={() => setSelectedSubFest(fest.name)}
-                className={`px-6 py-3 font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
-                  selectedSubFest === fest.name
+                className={`px-6 py-3 font-bold uppercase tracking-wider whitespace-nowrap transition-all ${selectedSubFest === fest.name
                     ? 'bg-white/20 border-2'
                     : 'glass border border-white/10 hover:bg-white/5'
-                }`}
+                  }`}
                 style={{
                   borderColor: selectedSubFest === fest.name ? fest.color : undefined
                 }}
@@ -91,10 +99,11 @@ const GalleryPage = () => {
           </div>
 
           {/* Gallery Grid */}
-          {loading ? (
-            <div className="text-center py-12 text-gray-400" data-testid="loading-state">Loading gallery...</div>
-          ) : filteredImages.length === 0 ? (
-            <div className="text-center py-12 text-gray-400" data-testid="empty-state">No images found</div>
+          {filteredImages.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 border border-dashed border-white/10 rounded-xl bg-white/5 p-12">
+              <p className="text-xl font-bold mb-2">No images found</p>
+              <p className="text-sm">Add images to <span className="font-mono text-[#d946ef]">public/highlights/</span> to see them here.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredImages.map((image, idx) => (
@@ -104,13 +113,16 @@ const GalleryPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: idx * 0.05 }}
                   onClick={() => setSelectedImage(image)}
-                  className="relative aspect-square overflow-hidden cursor-pointer group"
+                  className="relative aspect-square overflow-hidden cursor-pointer group rounded-xl border border-white/10"
                   data-testid={`gallery-image-${image.id}`}
                 >
                   <img
                     src={image.image_url}
                     alt={image.caption || 'Gallery image'}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => {
+                      e.target.src = `https://placehold.co/600x600/1e1e1e/FFF?text=${image.sub_fest.split('-')[1]}`;
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -131,17 +143,35 @@ const GalleryPage = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={() => setSelectedImage(null)}
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6"
+          className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md"
           data-testid="image-modal"
         >
-          <motion.img
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            src={selectedImage.image_url}
-            alt={selectedImage.caption}
-            className="max-w-full max-h-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="relative max-w-5xl w-full max-h-full flex items-center justify-center">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-12 right-0 text-white/50 hover:text-white transition-colors"
+            >
+              Close
+            </button>
+            <motion.img
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              src={selectedImage.image_url}
+              alt={selectedImage.caption}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border border-white/10"
+              onClick={(e) => e.stopPropagation()}
+              onError={(e) => {
+                e.target.src = `https://placehold.co/800x600/1e1e1e/FFF?text=${selectedImage.sub_fest.split('-')[1]}`;
+              }}
+            />
+            {selectedImage.caption && (
+              <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
+                <span className="bg-black/60 text-white px-4 py-2 rounded-full backdrop-blur-md text-sm">
+                  {selectedImage.caption}
+                </span>
+              </div>
+            )}
+          </div>
         </motion.div>
       )}
     </div>
