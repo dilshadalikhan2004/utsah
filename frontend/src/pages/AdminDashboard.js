@@ -328,6 +328,29 @@ const AdminDashboard = () => {
     setCoordinatorData({ ...coordinatorData, coordinators: newCoords });
   };
 
+  const handleDeleteRegistration = async (registrationId) => {
+    if (!window.confirm("Are you sure you want to delete this registration? This cannot be undone.")) return;
+
+    try {
+      await axios.delete(`${API_URL}/registrations/${registrationId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Registration deleted");
+
+      // Update local state by filtering out the deleted registration
+      setSelectedEventRegistrations(prev => ({
+        ...prev,
+        registrations: prev.registrations.filter(r => r.id !== registrationId)
+      }));
+
+      // Refresh global data to update counts
+      fetchData();
+
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete registration");
+    }
+  };
+
   const viewEventRegistrations = (eventId) => {
     const eventRegs = registrations.filter(reg => reg.event_id === eventId);
     const event = events.find(e => e.id === eventId);
@@ -803,6 +826,13 @@ const AdminDashboard = () => {
                           Date: {new Date(reg.registered_at).toLocaleString('en-IN')}
                         </p>
                       </div>
+                      <button
+                        onClick={() => handleDeleteRegistration(reg.id)}
+                        className="p-2 glass hover:bg-red-500/20 text-red-400 transition-colors"
+                        title="Delete Registration"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
                     </div>
 
                     {/* Individual Event */}

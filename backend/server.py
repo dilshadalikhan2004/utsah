@@ -546,6 +546,21 @@ async def get_all_registrations(admin: dict = Depends(get_admin_user)):
                 })
     return registrations
 
+@api_router.delete("/registrations/{registration_id}")
+async def delete_registration(registration_id: str, admin: dict = Depends(get_admin_user)):
+    reg = await db.registrations.find_one({"id": registration_id})
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    await db.registrations.delete_one({"id": registration_id})
+    # Decrement count safely
+    await db.events.update_one(
+        {"id": reg["event_id"], "registered_count": {"$gt": 0}}, 
+        {"$inc": {"registered_count": -1}}
+    )
+    
+    return {"message": "Registration deleted successfully"}
+
 @api_router.get("/registrations/export")
 async def export_registrations(event_id: Optional[str] = None, admin: dict = Depends(get_admin_user)):
     query = {}
