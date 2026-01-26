@@ -943,6 +943,18 @@ async def update_coordinator_data(data: SystemData, admin: dict = Depends(get_ad
     await db.system.replace_one({"type": "coordinator_data"}, data_dict, upsert=True)
     return data
 
+@api_router.post("/system/sync-counts")
+async def sync_event_counts(admin: dict = Depends(get_admin_user)):
+    events = await db.events.find({}).to_list(None)
+    updated = 0
+    for event in events:
+        eid = event['id']
+        actual = await db.registrations.count_documents({"event_id": eid})
+        if event.get('registered_count', 0) != actual:
+            await db.events.update_one({"id": eid}, {"$set": {"registered_count": actual}})
+            updated += 1
+    return {"message": f"Synchronization complete. Updated {updated} events.", "updated_count": updated}
+
 # Include the router in the main app
 app.include_router(api_router)
 

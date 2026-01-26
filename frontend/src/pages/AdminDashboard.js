@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { LogOut, Plus, Upload, Download, Bell, Calendar, Users, Trophy, Pencil, Trash, Settings, ArrowLeft } from 'lucide-react';
+import { LogOut, Plus, Upload, Download, Bell, Calendar, Users, Trophy, Pencil, Trash, Settings, ArrowLeft, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 
@@ -261,6 +261,20 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleSyncCounts = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.post(`${API_URL}/system/sync-counts`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(response.data.message);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to sync counts');
+      setLoading(false);
+    }
+  };
+
   const handleSaveCoordinators = async () => {
     try {
       await axios.post(`${API_URL}/system/coordinators`, coordinatorData, {
@@ -490,6 +504,16 @@ const AdminDashboard = () => {
               <Users className="w-8 h-8 text-green-400 mb-3 group-hover:scale-110 transition-transform" />
               <h3 className="text-lg font-bold mb-2">Coordinators</h3>
               <p className="text-gray-400 text-sm">View Contact Details</p>
+            </button>
+
+            <button
+              onClick={handleSyncCounts}
+              className="glass p-6 rounded-none text-left hover:bg-white/5 transition-colors group"
+              data-testid="sync-counts-button"
+            >
+              <RefreshCw className="w-8 h-8 text-blue-400 mb-3 group-hover:rotate-180 transition-transform duration-700" />
+              <h3 className="text-lg font-bold mb-2">Sync Data</h3>
+              <p className="text-gray-400 text-sm">Fix registration counts</p>
             </button>
 
 
