@@ -35,13 +35,13 @@ const LandingPage = () => {
   const teamMembers = [
     {
       name: "Dilshad Ali Khan",
-      role: "Head Coordinator & Full-Stack Developer",
+      role: "Lead Coordinator & Full-Stack Developer",
       designation: "Final Year B.Tech, CSE (AI)",
       image: process.env.PUBLIC_URL + "/dilshad.jpg"
     },
     {
       name: "Ashwini Kr. Khatua",
-      role: "Head Coordinator & Full-Stack Developer ",
+      role: "Lead Coordinator & Full-Stack Developer ",
       designation: "Final Year B.Tech, CSE (AI)",
       image: process.env.PUBLIC_URL + "/ashwini.jpg"
     }
