@@ -2,9 +2,9 @@
 description: Guide to deploy the Utsah application to the web
 ---
 
-# Deployment Guide for UTSAH (MERN-like Stack)
+# Deployment Guide for UTSAH
 
-This guide will help you deploy your application for free using **MongoDB Atlas** (Database), **Render** (Backend), and **Vercel** (Frontend).
+This guide will help you deploy your application using **MongoDB Atlas** (Database), **Railway** (Backend), and **Vercel** (Frontend).
 
 ---
 
@@ -24,26 +24,26 @@ This guide will help you deploy your application for free using **MongoDB Atlas*
 
 ---
 
-## 2. Backend Deployment (Render)
+## 2. Backend Deployment (Railway)
 
-1.  Go to [Render.com](https://render.com) and sign up/login.
-2.  Click **New +** -> **Web Service**.
+1.  Go to [Railway.app](https://railway.app) and sign up/login.
+2.  Click **New Project** -> **Deploy from GitHub repo**.
 3.  Connect your GitHub repository (`dilshadalikhan2004/utsah`).
 4.  **Settings**:
-    *   **Name**: `utsah-backend`
-    *   **Region**: Singapore or Frankfurt (closest to India).
     *   **Root Directory**: `backend`
-    *   **Runtime**: Python 3
-    *   **Build Command**: `pip install -r requirements.txt`
     *   **Start Command**: `uvicorn server:app --host 0.0.0.0 --port $PORT`
-5.  **Environment Variables** (Advanced):
-    *   Add the following variables:
-        *   `MONGO_URL`: (Paste your MongoDB connection string from Step 1).
-        *   `DB_NAME`: `utsah2026`
-        *   `JWT_SECRET`: (Enter a long random string for security).
-        *   `CORS_ORIGINS`: `*` (Temporarily allow all, update to your Vercel URL later).
-6.  Click **Create Web Service**.
-7.  Wait for deployment to finish. Copy your backend URL (e.g., `https://utsah-backend.onrender.com`).
+5.  **Environment Variables**:
+    *   `MONGO_URL`: (Paste your MongoDB connection string)
+    *   `DB_NAME`: `utsah_database`
+    *   `JWT_SECRET`: (Long random string)
+    *   `CORS_ORIGINS`: `*` (Update later)
+    *   `RESEND_API_KEY`: (Get from resend.com for password reset emails)
+    *   `FRONTEND_URL`: `https://utsahfest.in`
+6.  **Add Custom Domain** (IMPORTANT for mobile network compatibility):
+    *   Go to Settings -> Domains
+    *   Add: `api.utsahfest.in`
+    *   Add the CNAME record to your domain's DNS
+7.  Your backend URL: `https://utsah-production.up.railway.app` or `https://api.utsahfest.in`
 
 ---
 
@@ -56,18 +56,36 @@ This guide will help you deploy your application for free using **MongoDB Atlas*
     *   **Framework Preset**: Create React App
     *   **Root Directory**: Click "Edit" and select `frontend`.
 5.  **Environment Variables**:
-    *   Add variable: `REACT_APP_BACKEND_URL`
-    *   Value: Your Render Backend URL **without the trailing slash** (e.g., `https://utsah-backend.onrender.com`).
+    *   `REACT_APP_BACKEND_URL`: `https://api.utsahfest.in` (or Railway URL)
 6.  Click **Deploy**.
-7.  Wait for the build to complete. You now have your live frontend URL (e.g., `https://utsah-frontend.vercel.app`).
 
 ---
 
-## 4. Final Security Step
+## 4. Custom Domain Setup (REQUIRED for Mobile Networks)
 
-1.  Go back to **Render** Dashboard -> **Environment**.
-2.  Edit `CORS_ORIGINS`.
-3.  Change it from `*` to your actual Vercel URL (e.g., `https://utsah-frontend.vercel.app`).
-4.  **Save Changes** (this will trigger a redeploy).
+Mobile networks (Jio, Airtel, Vi) have DNS issues with `*.up.railway.app` subdomains. Using a custom domain fixes this.
 
-**🎉 Done! Your app is now live.**
+### For API (`api.utsahfest.in`):
+1.  In Railway: Settings -> Domains -> Add `api.utsahfest.in`
+2.  In your domain registrar, add:
+    *   Type: `CNAME`
+    *   Name: `api`
+    *   Value: `utsah-production.up.railway.app`
+
+### Update Frontend:
+1.  In Vercel, update `REACT_APP_BACKEND_URL` to `https://api.utsahfest.in`
+2.  Redeploy
+
+---
+
+## 5. Password Reset Email Setup (Resend)
+
+1.  Go to [resend.com](https://resend.com) and create account
+2.  Add your domain `utsahfest.in` and verify DNS
+3.  Get API key
+4.  Add to Railway environment: `RESEND_API_KEY=re_xxxxxxx`
+
+---
+
+**🎉 Done! Your app is now live and works on all networks.**
+

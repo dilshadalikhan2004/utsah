@@ -18,6 +18,8 @@ import csv
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import openpyxl
+import secrets
+import resend
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,6 +49,12 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'utsah-secret-key-2026-fest-gita-colle
 JWT_ALGORITHM = 'HS256'
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
+
+# Resend Email Configuration (for password reset)
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -224,6 +232,14 @@ class ShortlistEntry(BaseModel):
     department: str
     status: str
 
+# Password Reset Models
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 # Auth endpoints
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserRegister):
@@ -291,6 +307,107 @@ async def login(credentials: UserLogin):
     )
     
     return TokenResponse(token=token, user=user_response)
+
+# Forgot Password - sends reset email
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    # Check if user exists
+    user = await db.users.find_one({"email": request.email}, {"_id": 0})
+    
+    # Always return success to prevent email enumeration attacks
+    if not user:
+        return {"message": "If an account exists with this email, you will receive a password reset link."}
+    
+    # Generate secure reset token
+    reset_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Store reset token in database
+    await db.password_resets.delete_many({"email": request.email})  # Remove old tokens
+    await db.password_resets.insert_one({
+        "email": request.email,
+        "token": reset_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Send email via Resend
+    reset_link = f"{FRONTEND_URL}/reset-password?token={reset_token}"
+    
+    if RESEND_API_KEY:
+        try:
+            resend.Emails.send({
+                "from": "UTSAH Fest <noreply@utsahfest.in>",
+                "to": [request.email],
+                "subject": "Reset Your UTSAH Password",
+                "html": f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #d946ef 0%, #ec4899 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+                        <h1 style="color: white; margin: 0; text-align: center;">UTSAH 2026</h1>
+                    </div>
+                    <div style="background: #1a1a2e; padding: 30px; border-radius: 0 0 10px 10px; color: #eee;">
+                        <h2 style="color: #d946ef;">Password Reset Request</h2>
+                        <p>Hi {user.get('full_name', 'there')},</p>
+                        <p>We received a request to reset your password. Click the button below to create a new password:</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{reset_link}" style="background: linear-gradient(135deg, #d946ef 0%, #ec4899 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Password</a>
+                        </div>
+                        <p style="color: #888; font-size: 14px;">This link will expire in 1 hour.</p>
+                        <p style="color: #888; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+                        <hr style="border: 1px solid #333; margin: 20px 0;">
+                        <p style="color: #666; font-size: 12px; text-align: center;">UTSAH - Annual College Fest | GITA Autonomous College</p>
+                    </div>
+                </div>
+                """
+            })
+            logger.info(f"Password reset email sent to {request.email}")
+        except Exception as e:
+            logger.error(f"Failed to send reset email: {e}")
+            # Don't expose email errors to user
+    else:
+        logger.warning(f"RESEND_API_KEY not configured. Reset token for {request.email}: {reset_token}")
+    
+    return {"message": "If an account exists with this email, you will receive a password reset link."}
+
+# Reset Password - validates token and updates password
+@api_router.post("/auth/reset-password")
+async def reset_password(request: ResetPasswordRequest):
+    # Find the reset token
+    reset_record = await db.password_resets.find_one({"token": request.token})
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Check expiration
+    expires_at = datetime.fromisoformat(reset_record['expires_at'])
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if datetime.now(timezone.utc) > expires_at:
+        await db.password_resets.delete_one({"token": request.token})
+        raise HTTPException(status_code=400, detail="Reset token has expired. Please request a new one.")
+    
+    # Validate password strength
+    if len(request.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+    
+    # Update user's password
+    hashed_password = hash_password(request.new_password)
+    result = await db.users.update_one(
+        {"email": reset_record['email']},
+        {"$set": {"password": hashed_password}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete the used token
+    await db.password_resets.delete_one({"token": request.token})
+    
+    logger.info(f"Password reset successful for {reset_record['email']}")
+    
+    return {"message": "Password reset successful. You can now login with your new password."}
+
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):

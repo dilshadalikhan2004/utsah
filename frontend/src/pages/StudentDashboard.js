@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 import { LogOut, Calendar, Trophy, Bell, User, Pencil, Users } from 'lucide-react';
 import { toast } from 'sonner';
-
-const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const StudentDashboard = () => {
   const { user, logout, token, refreshUser } = useAuth();
@@ -59,11 +57,9 @@ const StudentDashboard = () => {
   const fetchData = async () => {
     try {
       const [regsRes, eventsRes, notifsRes] = await Promise.all([
-        axios.get(`${API_URL}/registrations/my`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API_URL}/events`),
-        axios.get(`${API_URL}/notifications`)
+        apiClient.get('/registrations/my'),
+        apiClient.get('/events'),
+        apiClient.get('/notifications')
       ]);
 
       setStats({
@@ -72,7 +68,7 @@ const StudentDashboard = () => {
       });
       setEvents(eventsRes.data);
     } catch (error) {
-      toast.error('Failed to load dashboard data');
+      toast.error(error.userMessage || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -81,14 +77,12 @@ const StudentDashboard = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`${API_URL}/auth/me`, profileForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await apiClient.put('/auth/me', profileForm);
       toast.success('Profile updated successfully');
       setShowProfileModal(false);
       await refreshUser();
     } catch (error) {
-      toast.error('Failed to update profile');
+      toast.error(error.userMessage || 'Failed to update profile');
     }
   };
 

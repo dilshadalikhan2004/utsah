@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 import { ArrowLeft, Search, Filter } from 'lucide-react';
 import { toast } from 'sonner';
-
-const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const EventsPage = () => {
   const navigate = useNavigate();
@@ -35,10 +33,10 @@ const EventsPage = () => {
 
   const fetchEvents = async () => {
     try {
-      const response = await axios.get(`${API_URL}/events`);
+      const response = await apiClient.get('/events');
       setEvents(response.data);
     } catch (error) {
-      toast.error('Failed to load events');
+      toast.error(error.userMessage || 'Failed to load events');
     } finally {
       setLoading(false);
     }
@@ -109,8 +107,8 @@ const EventsPage = () => {
                   key={fest.name}
                   onClick={() => setSelectedSubFest(fest.name)}
                   className={`px-6 py-3 font-bold uppercase tracking-wider whitespace-nowrap transition-all ${selectedSubFest === fest.name
-                      ? 'bg-white/20 border-2'
-                      : 'glass border border-white/10 hover:bg-white/5'
+                    ? 'bg-white/20 border-2'
+                    : 'glass border border-white/10 hover:bg-white/5'
                     }`}
                   style={{
                     borderColor: selectedSubFest === fest.name ? fest.color : undefined

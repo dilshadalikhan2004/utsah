@@ -1,14 +1,22 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient, { wakeUpServer } from '../utils/apiClient';
 
 const AuthContext = createContext();
-
-const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [serverReady, setServerReady] = useState(false);
+
+  // Wake up server on app load
+  useEffect(() => {
+    const initServer = async () => {
+      const isAwake = await wakeUpServer();
+      setServerReady(isAwake);
+    };
+    initServer();
+  }, []);
 
   useEffect(() => {
     if (token) {
@@ -20,7 +28,7 @@ export function AuthProvider({ children }) {
 
   const fetchUser = async (authToken) => {
     try {
-      const response = await axios.get(`${API_URL}/auth/me`, {
+      const response = await apiClient.get('/auth/me', {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       setUser(response.data);
@@ -36,7 +44,7 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+    const response = await apiClient.post('/auth/login', { email, password });
     setToken(response.data.token);
     setUser(response.data.user);
     localStorage.setItem('token', response.data.token);
@@ -44,7 +52,7 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (userData) => {
-    const response = await axios.post(`${API_URL}/auth/register`, userData);
+    const response = await apiClient.post('/auth/register', userData);
     setToken(response.data.token);
     setUser(response.data.user);
     localStorage.setItem('token', response.data.token);
@@ -63,6 +71,7 @@ export function AuthProvider({ children }) {
         user,
         token,
         loading,
+        serverReady,
         isAuthenticated: !!user,
         login,
         register,
@@ -79,4 +88,4 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-console.log("API_URL =", API_URL);
+console.log("API configured with retry logic for cold starts");
