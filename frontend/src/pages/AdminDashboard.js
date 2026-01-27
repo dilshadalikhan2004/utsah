@@ -743,6 +743,45 @@ const AdminDashboard = () => {
                   )}
                 </div>
 
+                {/* Coordinators Section */}
+                <div className="space-y-2">
+                  <label className="text-gray-400 text-sm">Coordinators</label>
+                  {eventForm.coordinators.map((coord, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={`Coordinator ${index + 1} (e.g., Dr. John Doe)`}
+                        value={coord}
+                        onChange={(e) => {
+                          const newCoords = [...eventForm.coordinators];
+                          newCoords[index] = e.target.value;
+                          setEventForm({ ...eventForm, coordinators: newCoords });
+                        }}
+                        className="flex-1 bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-2 text-white"
+                      />
+                      {eventForm.coordinators.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newCoords = eventForm.coordinators.filter((_, i) => i !== index);
+                            setEventForm({ ...eventForm, coordinators: newCoords });
+                          }}
+                          className="px-3 py-2 text-red-400 hover:bg-red-500/20 transition-colors"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setEventForm({ ...eventForm, coordinators: [...eventForm.coordinators, ''] })}
+                    className="text-sm text-[#d946ef] hover:text-[#ec4899] transition-colors"
+                  >
+                    + Add Another Coordinator
+                  </button>
+                </div>
+
 
 
                 <div className="flex gap-4 justify-end pt-4">
