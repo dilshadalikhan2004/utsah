@@ -577,9 +577,9 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
     if not event.get('is_registration_open', True):
          raise HTTPException(status_code=400, detail="Registration for this event is currently closed by admin")
     
-    # Check capacity
-    if event['registered_count'] >= event['capacity']:
-        raise HTTPException(status_code=400, detail="Event is full")
+    # Capacity check removed - relying solely on manual admin toggle
+    # if event['registered_count'] >= event['capacity']:
+    #     raise HTTPException(status_code=400, detail="Event is full")
     
     # Check if already registered
     existing = await db.registrations.find_one({"event_id": registration.event_id, "student_email": user['email']}, {"_id": 0})
