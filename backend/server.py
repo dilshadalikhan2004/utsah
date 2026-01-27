@@ -15,11 +15,9 @@ import pandas as pd
 import io
 from io import BytesIO
 import csv
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-import openpyxl
 import secrets
 import resend
+import re
 
 logging.basicConfig(
     level=logging.INFO,
@@ -129,6 +127,12 @@ class UserRegister(BaseModel):
         if v < 1 or v > 4:
             raise ValueError('Year must be between 1 and 4')
         return v
+    
+    @field_validator('mobile_number')
+    def validate_mobile(cls, v):
+        if not re.match(r'^\d{10}$', v):
+            raise ValueError('Mobile number must be exactly 10 digits')
+        return v
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -149,6 +153,19 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     token: str
     user: UserResponse
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    department: Optional[str] = None
+    year: Optional[int] = None
+    mobile_number: Optional[str] = None
+    roll_number: Optional[str] = None
+    
+    @field_validator('mobile_number')
+    def validate_mobile(cls, v):
+        if v and not re.match(r'^\d{10}$', v):
+             raise ValueError('Mobile number must be exactly 10 digits')
+        return v
 
 class EventCreate(BaseModel):
     name: str
@@ -193,6 +210,12 @@ class TeamMember(BaseModel):
     department: str
     year: int
     mobile_number: str
+    
+    @field_validator('mobile_number')
+    def validate_mobile(cls, v):
+        if not re.match(r'^\d{10}$', v):
+            raise ValueError('Mobile number must be exactly 10 digits')
+        return v
 
 class EventRegistration(BaseModel):
     event_id: str
@@ -416,7 +439,6 @@ async def reset_password(request: ResetPasswordRequest):
     
     return {"message": "Password reset successful. You can now login with your new password."}
 
-
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
     return UserResponse(
@@ -430,13 +452,6 @@ async def get_me(user: dict = Depends(get_current_user)):
         verified=user['verified'],
         created_at=datetime.fromisoformat(user['created_at']) if isinstance(user['created_at'], str) else user['created_at']
     )
-
-class UserUpdate(BaseModel):
-    full_name: Optional[str] = None
-    department: Optional[str] = None
-    year: Optional[int] = None
-    mobile_number: Optional[str] = None
-    roll_number: Optional[str] = None
 
 @api_router.put("/auth/me", response_model=UserResponse)
 async def update_me(updates: UserUpdate, user: dict = Depends(get_current_user)):
@@ -460,6 +475,22 @@ async def update_me(updates: UserUpdate, user: dict = Depends(get_current_user))
         verified=updated_user['verified'],
         created_at=datetime.fromisoformat(updated_user['created_at']) if isinstance(updated_user['created_at'], str) else updated_user['created_at']
     )
+
+class EventUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    sub_fest: Optional[str] = None
+    event_type: Optional[str] = None
+    coordinators: Optional[List[str]] = None
+    timing: Optional[str] = None
+    venue: Optional[str] = None
+    registration_deadline: Optional[datetime] = None
+    capacity: Optional[int] = None
+    min_team_size: Optional[int] = None
+    max_team_size: Optional[int] = None
+    max_events_per_student: Optional[int] = None
+    is_active: Optional[bool] = None
+    is_registration_open: Optional[bool] = None
 
 # Event endpoints
 @api_router.post("/events", response_model=EventResponse)
@@ -488,13 +519,19 @@ async def get_events(sub_fest: Optional[str] = None):
     
     events = await db.events.find(query, {"_id": 0}).to_list(1000)
     
+    processed_events = []
     for event in events:
-        if isinstance(event['registration_deadline'], str):
-            event['registration_deadline'] = datetime.fromisoformat(event['registration_deadline'])
-        if isinstance(event['created_at'], str):
-            event['created_at'] = datetime.fromisoformat(event['created_at'])
+        try:
+            if isinstance(event.get('registration_deadline'), str):
+                event['registration_deadline'] = datetime.fromisoformat(event['registration_deadline'])
+            if isinstance(event.get('created_at'), str):
+                event['created_at'] = datetime.fromisoformat(event['created_at'])
+            processed_events.append(EventResponse(**event))
+        except Exception as e:
+            logger.error(f"Skipping corrupt event {event.get('id')}: {e}")
+            continue
     
-    return [EventResponse(**event) for event in events]
+    return processed_events
 
 @api_router.get("/events/{event_id}", response_model=EventResponse)
 async def get_event(event_id: str):
@@ -510,28 +547,10 @@ async def get_event(event_id: str):
     return EventResponse(**event)
 
 
-
-class EventUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    sub_fest: Optional[str] = None
-    event_type: Optional[str] = None
-    coordinators: Optional[List[str]] = None
-    timing: Optional[str] = None
-    venue: Optional[str] = None
-    registration_deadline: Optional[datetime] = None
-    capacity: Optional[int] = None
-    min_team_size: Optional[int] = None
-    max_team_size: Optional[int] = None
-    max_events_per_student: Optional[int] = None
-    is_active: Optional[bool] = None
-    is_registration_open: Optional[bool] = None
-
 @api_router.put("/events/{event_id}", response_model=EventResponse)
 async def update_event(event_id: str, updates: EventUpdate, admin: dict = Depends(get_admin_user)):
     # Prepare update data
-    with open("debug_updates.log", "a") as f:
-        f.write(f"Updating {event_id} with: {updates.model_dump_json()}\n")
+    logger.info(f"Updating {event_id} with: {updates.model_dump_json()}")
 
     update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
     
@@ -547,10 +566,14 @@ async def update_event(event_id: str, updates: EventUpdate, admin: dict = Depend
         raise HTTPException(status_code=404, detail="Event not found")
         
     updated = await db.events.find_one({"id": event_id}, {"_id": 0})
-    if isinstance(updated['registration_deadline'], str):
-        updated['registration_deadline'] = datetime.fromisoformat(updated['registration_deadline'])
-    if isinstance(updated['created_at'], str):
-        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    try:
+        if isinstance(updated.get('registration_deadline'), str):
+            updated['registration_deadline'] = datetime.fromisoformat(updated['registration_deadline'])
+        if isinstance(updated.get('created_at'), str):
+            updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    except Exception as e:
+         logger.error(f"Error parsing date for updated event {event_id}: {e}")
     
     return EventResponse(**updated)
 
@@ -574,20 +597,9 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    # Deadline check removed - relying solely on manual admin toggle
-    # deadline = datetime.fromisoformat(event['registration_deadline']) if isinstance(event['registration_deadline'], str) else event['registration_deadline']
-    # if deadline.tzinfo is None:
-    #     deadline = deadline.replace(tzinfo=timezone.utc)
-    # if datetime.now(timezone.utc) > deadline:
-    #     raise HTTPException(status_code=400, detail="Registration deadline passed")
-    
     # Check manual registration toggle
     if not event.get('is_registration_open', True):
          raise HTTPException(status_code=400, detail="Registration for this event is currently closed by admin")
-    
-    # Capacity check removed - relying solely on manual admin toggle
-    # if event['registered_count'] >= event['capacity']:
-    #     raise HTTPException(status_code=400, detail="Event is full")
     
     # Check if already registered
     existing = await db.registrations.find_one({"event_id": registration.event_id, "student_email": user['email']}, {"_id": 0})
@@ -598,48 +610,51 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
     SUB_FEST_LIMITS = {
         "TECHNOLOGY-ANWESH": 2,
         "CULTURAL-AKANKSHA": 2,
-        "SPORTS-AHWAAN": 4
+        "SPORTS-AHWAAN": 2  # Default limit
     }
     
-    limit = SUB_FEST_LIMITS.get(event['sub_fest'], 3) # Default to 3 if unknown
+    sub_fest = event.get('sub_fest')
+    max_allowed = SUB_FEST_LIMITS.get(sub_fest, 2) # Default to 2 if unknown
     
-    sub_fest_registrations = await db.registrations.count_documents({
-        "student_email": user['email'],
-        "sub_fest": event['sub_fest']
-    })
+    # Count existing registrations for this sub_fest
+    # We need to find all registrations for this user, then look up the events to check their sub_fest
+    user_registrations = await db.registrations.find({"student_email": user['email']}).to_list(100)
     
-    if sub_fest_registrations >= limit:
-        raise HTTPException(status_code=400, detail=f"Maximum {limit} events allowed for {event['sub_fest'].split('-')[1]}")
+    count_in_subfest = 0
+    for reg in user_registrations:
+        if reg['event_id'] == registration.event_id: continue # Should be caught by existing check, but just in case
+        
+        reg_event = await db.events.find_one({"id": reg['event_id']}, {"sub_fest": 1})
+        if reg_event and reg_event.get('sub_fest') == sub_fest:
+            count_in_subfest += 1
+            
+    if count_in_subfest >= max_allowed:
+        raise HTTPException(status_code=400, detail=f"You can only register for {max_allowed} events in {sub_fest}")
     
-    # Handle team events
-    team_members = None
+    # Create registration
     try:
-        if event['event_type'] == 'team':
-            if not registration.team_members:
-                raise HTTPException(status_code=400, detail="Team members required for team events")
-        
-            # Validate team size
-            if len(registration.team_members) < event['min_team_size'] or len(registration.team_members) > event['max_team_size']:
-                raise HTTPException(status_code=400, detail=f"Team size must be between {event['min_team_size']} and {event['max_team_size']}")
-        
-            # Check for duplicate emails
-            emails = [member.email for member in registration.team_members]
-            if len(emails) != len(set(emails)):
-                raise HTTPException(status_code=400, detail="Duplicate team member emails not allowed")
-        
-            # Convert team members to dict for storage
-            team_members = [member.model_dump() for member in registration.team_members]
-    
-        # Create registration
         reg_dict = {
-            "id": f"{user['email']}-{registration.event_id}",
+            "id": f"reg-{secrets.token_hex(8)}",
             "event_id": registration.event_id,
             "student_email": user['email'],
-            "team_members": team_members,
             "registered_at": datetime.now(timezone.utc).isoformat(),
             "event_name": event['name'],
-            "sub_fest": event['sub_fest']
+            "sub_fest": event['sub_fest'],
+            "full_name": user['full_name'],
+            "roll_number": user['roll_number'],
+            "department": user['department'],
+            "year": user['year'],
+            "mobile_number": user['mobile_number']
         }
+        
+        # Handle team members if necessary
+        if event['event_type'] == 'team':
+             # Clean up team members to be plain dicts, not Pydantic models
+             if registration.team_members:
+                 # Verify each team member has valid details if needed (redundant check if generic validator works)
+                 reg_dict['team_members'] = [m.model_dump() for m in registration.team_members]
+             else:
+                 reg_dict['team_members'] = []
     
         await db.registrations.insert_one(reg_dict)
         await db.events.update_one({"id": registration.event_id}, {"$inc": {"registered_count": 1}})
@@ -840,103 +855,47 @@ async def export_registrations(format: str = Query("csv"), admin: dict = Depends
     
     # Enhance with user details
     for reg in registrations:
-        user = await db.users.find_one({"email": reg['student_email']}, {"_id": 0})
-        if user:
-            reg['full_name'] = user.get('full_name')
-            reg['roll_number'] = user.get('roll_number')
-            reg['department'] = user.get('department')
-            reg['year'] = user.get('year')
-            reg['mobile_number'] = user.get('mobile_number')
+        if reg.get("student_email"):
+            user = await db.users.find_one({"email": reg["student_email"]}, {"_id": 0})
+            if user:
+                reg.update({
+                    "full_name": user.get("full_name"),
+                    "roll_number": user.get("roll_number"),
+                    "department": user.get("department"),
+                    "year": user.get("year"),
+                    "mobile_number": user.get("mobile_number")
+                })
     
-    return {"data": registrations, "format": format, "message": "Export data ready"}
-
-# Initialize default admin
-@app.on_event("startup")
-async def startup_event():
-    # Create default admin if not exists
-    admin = await db.users.find_one({"email": "admin@utsah.com"}, {"_id": 0})
-    if not admin:
-        admin_data = {
-            "id": "admin@utsah.com",
-            "email": "admin@utsah.com",
-            "password": hash_password("Admin@123"),
-            "full_name": "UTSAH Admin",
-            "roll_number": "ADMIN001",
-            "department": "Administration",
-            "year": 1,
-            "mobile_number": "9999999999",
-            "role": "admin",
-            "verified": True,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.users.insert_one(admin_data)
-        logging.info("Default admin created: admin@utsah.com / Admin@123")
+    # Convert to dataframe
+    df = pd.DataFrame(registrations)
     
-    # Auto-seed Anwesh Events
-    try:
-        from anwesh_data import EVENTS
-        for event_data in EVENTS:
-            event_id = f"{event_data['sub_fest']}-{event_data['name']}".replace(" ", "-").lower()
-            existing_event = await db.events.find_one({"id": event_id})
-            if not existing_event:
-                event_dict = event_data.copy()
-                event_dict['id'] = event_id
-                event_dict['registered_count'] = 0
-                event_dict['is_active'] = True
-                event_dict['created_at'] = datetime.now(timezone.utc).isoformat()
-                event_dict['max_events_per_student'] = 3
-                await db.events.insert_one(event_dict)
-                logging.info(f"Seeded event: {event_data['name']}")
-    except Exception as e:
-        logging.error(f"Error seeding events: {e}")
-
-    # Auto-seed Akanksha Events
-    try:
-        from akanksha_data import EVENTS as AKANKSHA_EVENTS
-        for event_data in AKANKSHA_EVENTS:
-            event_id = f"{event_data['sub_fest']}-{event_data['name']}".replace(" ", "-").lower()
-            existing_event = await db.events.find_one({"id": event_id})
-            if not existing_event:
-                event_dict = event_data.copy()
-                event_dict['id'] = event_id
-                event_dict['registered_count'] = 0
-                event_dict['is_active'] = True
-                event_dict['created_at'] = datetime.now(timezone.utc).isoformat()
-                event_dict['max_events_per_student'] = 2
-                # Ensure date fields are isoformatted
-                if isinstance(event_dict['registration_deadline'], str) and 'T' not in event_dict['registration_deadline']:
-                     # Parse simple date strings if needed or just trust the seed file is ISO
-                     pass
-
-                await db.events.insert_one(event_dict)
-                logging.info(f"Seeded event: {event_data['name']}")
-    except Exception as e:
-        logging.error(f"Error seeding Akanksha events: {e}")
-
-# System Data Endpoints
-class CoordinatorInfo(BaseModel):
-    event: str
-    faculty: List[Dict[str, str]]
-    students: List[Dict[str, str]]
-
-class ScheduleItem(BaseModel):
-    date: str
-    time: str
-    venue: str
-    event: str
-    faculty_in_charge: Optional[str] = None
+    # Select columns
+    columns = ["id", "event_id", "registered_at", "full_name", "email", "mobile_number", "roll_number"]
+    existing_cols = [c for c in columns if c in df.columns]
+    df = df[existing_cols]
+    
+    output = io.StringIO()
+    df.to_csv(output, index=False)
+    
+    return Response(
+        content=output.getvalue(), 
+        media_type="text/csv", 
+        headers={"Content-Disposition": "attachment; filename=registrations.csv"}
+    )
 
 class SystemData(BaseModel):
-    rules: List[str]
-    additional_rules: List[str]
-    schedule: List[ScheduleItem]
-    coordinators: List[CoordinatorInfo]
+    model_config = ConfigDict(extra="ignore")
+    type: str = "general_info"
+    rules: List[str] = []
+    additional_rules: List[str] = []
+    schedule: List[Dict[str, str]] = []
+    coordinators: List[Dict[str, Any]] = []
 
 @api_router.get("/system/coordinators", response_model=SystemData)
 async def get_coordinator_data():
     data = await db.system.find_one({"type": "coordinator_data"}, {"_id": 0})
     if not data:
-        # Default/Seed Data
+        # Default data structure if not found
         default_data = {
             "type": "coordinator_data",
             "rules": [
