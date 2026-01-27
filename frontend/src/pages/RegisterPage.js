@@ -24,6 +24,33 @@ const RegisterPage = () => {
     e.preventDefault();
     setLoading(true);
 
+    // Validation
+    if (!formData.full_name.trim()) {
+      toast.error('Full Name is required');
+      setLoading(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(formData.mobile_number)) {
+      toast.error('Mobile number must be exactly 10 digits');
+      setLoading(false);
+      return;
+    }
+
     try {
       await register(formData);
       toast.success('Registration successful!');
