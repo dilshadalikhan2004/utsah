@@ -613,39 +613,43 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
     
     # Handle team events
     team_members = None
-    if event['event_type'] == 'team':
-        if not registration.team_members:
-            raise HTTPException(status_code=400, detail="Team members required for team events")
+    try:
+        if event['event_type'] == 'team':
+            if not registration.team_members:
+                raise HTTPException(status_code=400, detail="Team members required for team events")
         
-        # Validate team size
-        if len(registration.team_members) < event['min_team_size'] or len(registration.team_members) > event['max_team_size']:
-            raise HTTPException(status_code=400, detail=f"Team size must be between {event['min_team_size']} and {event['max_team_size']}")
+            # Validate team size
+            if len(registration.team_members) < event['min_team_size'] or len(registration.team_members) > event['max_team_size']:
+                raise HTTPException(status_code=400, detail=f"Team size must be between {event['min_team_size']} and {event['max_team_size']}")
         
-        # Check for duplicate emails
-        emails = [member.email for member in registration.team_members]
-        if len(emails) != len(set(emails)):
-            raise HTTPException(status_code=400, detail="Duplicate team member emails not allowed")
+            # Check for duplicate emails
+            emails = [member.email for member in registration.team_members]
+            if len(emails) != len(set(emails)):
+                raise HTTPException(status_code=400, detail="Duplicate team member emails not allowed")
         
-        # Convert team members to dict for storage
-        team_members = [member.model_dump() for member in registration.team_members]
-        
-        team_members = registration.team_members
+            # Convert team members to dict for storage
+            team_members = [member.model_dump() for member in registration.team_members]
     
-    # Create registration
-    reg_dict = {
-        "id": f"{user['email']}-{registration.event_id}",
-        "event_id": registration.event_id,
-        "student_email": user['email'],
-        "team_members": team_members,
-        "registered_at": datetime.now(timezone.utc).isoformat(),
-        "event_name": event['name'],
-        "sub_fest": event['sub_fest']
-    }
+        # Create registration
+        reg_dict = {
+            "id": f"{user['email']}-{registration.event_id}",
+            "event_id": registration.event_id,
+            "student_email": user['email'],
+            "team_members": team_members,
+            "registered_at": datetime.now(timezone.utc).isoformat(),
+            "event_name": event['name'],
+            "sub_fest": event['sub_fest']
+        }
     
-    await db.registrations.insert_one(reg_dict)
-    await db.events.update_one({"id": registration.event_id}, {"$inc": {"registered_count": 1}})
+        await db.registrations.insert_one(reg_dict)
+        await db.events.update_one({"id": registration.event_id}, {"$inc": {"registered_count": 1}})
     
-    return RegistrationResponse(**{**reg_dict, 'registered_at': datetime.fromisoformat(reg_dict['registered_at'])})
+        return RegistrationResponse(**{**reg_dict, 'registered_at': datetime.fromisoformat(reg_dict['registered_at'])})
+    except Exception as e:
+        print(f"Error during registration: {str(e)}") # Log to Railway console
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 @api_router.get("/registrations/my", response_model=List[RegistrationResponse])
 async def get_my_registrations(user: dict = Depends(get_current_user)):
