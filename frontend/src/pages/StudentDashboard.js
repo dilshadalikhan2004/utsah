@@ -76,6 +76,19 @@ const StudentDashboard = () => {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+
+    // Validation
+    if (!profileForm.full_name.trim()) {
+      toast.error('Full Name is required');
+      return;
+    }
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(profileForm.mobile_number)) {
+      toast.error('Mobile number must be exactly 10 digits');
+      return;
+    }
+
     try {
       await apiClient.put('/auth/me', profileForm);
       toast.success('Profile updated successfully');
