@@ -82,7 +82,10 @@ const AdminDashboard = () => {
       setStats({
         events: eventsRes.data.length,
         registrations: regsRes.data.length,
-        users: 0
+        users: 0,
+        akanksha: regsRes.data.filter(r => r.sub_fest === 'CULTURAL-AKANKSHA').length,
+        ahwaan: regsRes.data.filter(r => r.sub_fest === 'SPORTS-AHWAAN').length,
+        anwesh: regsRes.data.filter(r => r.sub_fest === 'TECHNOLOGY-ANWESH').length
       });
     } catch (error) {
       toast.error('Failed to load dashboard data');
@@ -472,6 +475,41 @@ const AdminDashboard = () => {
             <p className="text-gray-400 text-sm">System Status</p>
           </motion.div>
         </div>
+
+        {/* Sub-Fest Registration Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
+        >
+          <div className="glass p-6 rounded-none border-l-4 border-l-[#d946ef]">
+            <h3 className="text-xl font-bold text-white mb-2">Akanksha</h3>
+            <p className="text-[#d946ef] text-sm uppercase mb-4">Cultural</p>
+            <div className="flex items-end gap-2">
+              <span className="text-4xl font-black text-white">{stats.akanksha || 0}</span>
+              <span className="text-gray-500 mb-1">registrations</span>
+            </div>
+          </div>
+
+          <div className="glass p-6 rounded-none border-l-4 border-l-[#06b6d4]">
+            <h3 className="text-xl font-bold text-white mb-2">Anwesh</h3>
+            <p className="text-[#06b6d4] text-sm uppercase mb-4">Technology</p>
+            <div className="flex items-end gap-2">
+              <span className="text-4xl font-black text-white">{stats.anwesh || 0}</span>
+              <span className="text-gray-500 mb-1">registrations</span>
+            </div>
+          </div>
+
+          <div className="glass p-6 rounded-none border-l-4 border-l-[#f97316]">
+            <h3 className="text-xl font-bold text-white mb-2">Ahwaan</h3>
+            <p className="text-[#f97316] text-sm uppercase mb-4">Sports</p>
+            <div className="flex items-end gap-2">
+              <span className="text-4xl font-black text-white">{stats.ahwaan || 0}</span>
+              <span className="text-gray-500 mb-1">registrations</span>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Quick Actions */}
         <motion.div
