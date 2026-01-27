@@ -62,8 +62,12 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    # allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_origin_regex="https?://.*", # Allow all http/https origins safely
+    allow_origins=[
+        "http://localhost:3000",
+        "https://utsahfest.in",
+        "https://www.utsahfest.in",
+        "https://utsah-production.up.railway.app"
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
