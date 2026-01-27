@@ -1,0 +1,13 @@
+name: Keep Backend Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Runs every 10 minutes
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Utsah Backend
+        run: curl -I https://api.utsahfest.in/health

@@ -59,6 +59,10 @@ if RESEND_API_KEY:
 # Create the main app without a prefix
 app = FastAPI()
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
