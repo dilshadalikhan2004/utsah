@@ -15,6 +15,13 @@ const ForgotPasswordPage = () => {
         e.preventDefault();
         setLoading(true);
 
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            toast.error('Please enter a valid email address');
+            setLoading(false);
+            return;
+        }
+
         try {
             await apiClient.post('/auth/forgot-password', { email });
             setEmailSent(true);
