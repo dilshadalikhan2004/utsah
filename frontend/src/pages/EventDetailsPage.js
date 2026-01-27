@@ -70,6 +70,22 @@ const EventDetailsPage = () => {
         toast.error(`Maximum ${event.max_team_size} team members allowed`);
         return;
       }
+
+      // Strict Field Validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /^\d{10}$/;
+
+      for (let i = 0; i < validMembers.length; i++) {
+        const member = validMembers[i];
+        if (!emailRegex.test(member.email)) {
+          toast.error(`Invalid email for Team Member ${i + 1}`);
+          return;
+        }
+        if (!phoneRegex.test(member.mobile_number)) {
+          toast.error(`Mobile number for Team Member ${i + 1} must be 10 digits`);
+          return;
+        }
+      }
     }
 
     setRegistering(true);
