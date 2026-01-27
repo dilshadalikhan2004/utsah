@@ -180,12 +180,25 @@ const AdminDashboard = () => {
   const handleToggleRegistration = async (event) => {
     try {
       const newStatus = !event.is_registration_open;
-      await axios.put(`${API_URL}/events/${event.id}`, {
-        is_registration_open: newStatus
-      }, {
+      const updates = { is_registration_open: newStatus };
+
+      // If opening registration and deadline has passed, extend it
+      if (newStatus) {
+        const currentDeadline = new Date(event.registration_deadline);
+        if (currentDeadline < new Date()) {
+          // Extend to end of fest (approx) or far future
+          updates.registration_deadline = '2026-02-15T23:59:59.000Z';
+          toast.info('Registration opened and deadline extended to Feb 15th');
+        }
+      }
+
+      await axios.put(`${API_URL}/events/${event.id}`, updates, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success(`Registration ${newStatus ? 'opened' : 'closed'} successfully`);
+
+      if (!updates.registration_deadline) {
+        toast.success(`Registration ${newStatus ? 'opened' : 'closed'} successfully`);
+      }
       fetchData();
     } catch (error) {
       toast.error('Failed to update registration status');
