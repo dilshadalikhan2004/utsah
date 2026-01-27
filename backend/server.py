@@ -566,12 +566,12 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    # Check deadline
-    deadline = datetime.fromisoformat(event['registration_deadline']) if isinstance(event['registration_deadline'], str) else event['registration_deadline']
-    if deadline.tzinfo is None:
-        deadline = deadline.replace(tzinfo=timezone.utc)
-    if datetime.now(timezone.utc) > deadline:
-        raise HTTPException(status_code=400, detail="Registration deadline passed")
+    # Deadline check removed - relying solely on manual admin toggle
+    # deadline = datetime.fromisoformat(event['registration_deadline']) if isinstance(event['registration_deadline'], str) else event['registration_deadline']
+    # if deadline.tzinfo is None:
+    #     deadline = deadline.replace(tzinfo=timezone.utc)
+    # if datetime.now(timezone.utc) > deadline:
+    #     raise HTTPException(status_code=400, detail="Registration deadline passed")
     
     # Check manual registration toggle
     if not event.get('is_registration_open', True):
