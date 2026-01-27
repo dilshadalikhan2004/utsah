@@ -588,7 +588,7 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
     
     # Check participation limit per sub-fest
     SUB_FEST_LIMITS = {
-        "TECHNOLOGY-ANWESH": 3,
+        "TECHNOLOGY-ANWESH": 2,
         "CULTURAL-AKANKSHA": 2,
         "SPORTS-AHWAAN": 4
     }
