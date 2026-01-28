@@ -1066,6 +1066,20 @@ const AdminDashboard = () => {
                         </button>
                       </div>
 
+                      {/* Selected Sub Events (Robotics) */}
+                      {reg.selected_sub_events && reg.selected_sub_events.length > 0 && (
+                        <div className="glass p-4 rounded-none mb-4 border border-[#d946ef]/30 bg-[#d946ef]/5">
+                          <p className="text-sm text-[#d946ef] mb-2 font-bold uppercase tracking-wider">Selected Categories</p>
+                          <div className="flex flex-wrap gap-2">
+                            {reg.selected_sub_events.map((cat, cIdx) => (
+                              <span key={cIdx} className="px-3 py-1 bg-[#d946ef]/20 border border-[#d946ef]/50 rounded text-sm text-white">
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Individual Event */}
                       {!reg.team_members && (
                         <div className="glass p-4 rounded-none">

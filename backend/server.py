@@ -231,6 +231,7 @@ class RegistrationResponse(BaseModel):
     registered_at: datetime
     event_name: str
     sub_fest: str
+    selected_sub_events: Optional[List[str]] = None
 
 class NotificationCreate(BaseModel):
     title: str
@@ -874,7 +875,7 @@ async def export_registrations(format: str = Query("csv"), admin: dict = Depends
     df = pd.DataFrame(registrations)
     
     # Select columns
-    columns = ["id", "event_id", "registered_at", "full_name", "email", "mobile_number", "roll_number"]
+    columns = ["id", "event_id", "registered_at", "full_name", "email", "mobile_number", "roll_number", "selected_sub_events"]
     existing_cols = [c for c in columns if c in df.columns]
     df = df[existing_cols]
     
