@@ -875,9 +875,15 @@ async def export_registrations(format: str = Query("csv"), admin: dict = Depends
     df = pd.DataFrame(registrations)
     
     # Select columns
+    # Select columns
     columns = ["id", "event_id", "registered_at", "full_name", "email", "mobile_number", "roll_number", "selected_sub_events"]
-    existing_cols = [c for c in columns if c in df.columns]
-    df = df[existing_cols]
+    
+    # Ensure all columns exist
+    for col in columns:
+        if col not in df.columns:
+            df[col] = None
+            
+    df = df[columns]
     
     output = io.StringIO()
     df.to_csv(output, index=False)
