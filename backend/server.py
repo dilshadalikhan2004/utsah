@@ -885,11 +885,11 @@ async def export_registrations(format: str = Query("csv"), admin: dict = Depends
 
 class SystemData(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    type: str = "general_info"
-    rules: List[str] = []
-    additional_rules: List[str] = []
-    schedule: List[Dict[str, Any]] = []
-    coordinators: List[Dict[str, Any]] = []
+    type: Optional[str] = "general_info"
+    rules: Optional[List[Any]] = []
+    additional_rules: Optional[List[Any]] = []
+    schedule: Optional[List[Dict[str, Any]]] = []
+    coordinators: Optional[List[Dict[str, Any]]] = []
 
 @api_router.get("/system/coordinators", response_model=SystemData)
 async def get_coordinator_data():
