@@ -1238,7 +1238,7 @@ const AdminDashboard = () => {
                           placeholder="Date"
                           className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
                           value={item.date}
-                          onChange={(e) => updateScheduleItem(idx, 'date', e.target.value)}
+                          onChange={(e) => updateScheduleItem(item.originalIndex, 'date', e.target.value)}
                         />
                       </div>
                       <div className="col-span-3">
@@ -1247,7 +1247,7 @@ const AdminDashboard = () => {
                           placeholder="Time"
                           className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
                           value={item.time}
-                          onChange={(e) => updateScheduleItem(idx, 'time', e.target.value)}
+                          onChange={(e) => updateScheduleItem(item.originalIndex, 'time', e.target.value)}
                         />
                       </div>
                       <div className="col-span-3">
