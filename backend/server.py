@@ -220,6 +220,7 @@ class TeamMember(BaseModel):
 class EventRegistration(BaseModel):
     event_id: str
     team_members: Optional[List[TeamMember]] = None  # For team events, includes leader
+    selected_sub_events: Optional[List[str]] = None
 
 class RegistrationResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -646,6 +647,9 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
             "year": user['year'],
             "mobile_number": user['mobile_number']
         }
+        
+        if registration.selected_sub_events:
+            reg_dict['selected_sub_events'] = registration.selected_sub_events
         
         # Handle team members if necessary
         if event['event_type'] == 'team':

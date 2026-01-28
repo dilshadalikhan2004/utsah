@@ -23,6 +23,13 @@ const EventDetailsPage = () => {
     year: 1,
     mobile_number: ''
   }]);
+  const [selectedSubEvents, setSelectedSubEvents] = useState([]);
+
+  const roboticsSubEvents = [
+    { id: 'line_follower', label: 'Line Follower' },
+    { id: 'robo_racer', label: 'Robo Racer' },
+    { id: 'robo_soccer', label: 'Robo Soccer' }
+  ];
 
   useEffect(() => {
     fetchEvent();
@@ -92,7 +99,8 @@ const EventDetailsPage = () => {
     try {
       const payload = {
         event_id: eventId,
-        team_members: event.event_type === 'team' ? teamMembers.filter(m => m.email.trim()) : null
+        team_members: event.event_type === 'team' ? teamMembers.filter(m => m.email.trim()) : null,
+        selected_sub_events: selectedSubEvents.length > 0 ? selectedSubEvents : null
       };
 
       await axios.post(`${API_URL}/registrations`, payload, {
@@ -196,6 +204,36 @@ const EventDetailsPage = () => {
               ))}
             </div>
           </div>
+
+          {/* Robotics Sub-Events Selection */}
+          {event.name.toLowerCase().includes('robotics') && (
+            <div className="glass p-6 rounded-none mb-8">
+              <h3 className="text-xl font-bold mb-4">Select Categories</h3>
+              <p className="text-sm text-gray-400 mb-4">Choose the categories you want to participate in:</p>
+              <div className="space-y-3">
+                {roboticsSubEvents.map((subEvent) => (
+                  <label key={subEvent.id} className="flex items-center gap-3 cursor-pointer group">
+                    <div className={`w-5 h-5 border border-white/30 flex items-center justify-center transition-colors ${selectedSubEvents.includes(subEvent.label) ? 'bg-[#d946ef] border-[#d946ef]' : 'group-hover:border-white'}`}>
+                      {selectedSubEvents.includes(subEvent.label) && <span className="text-white text-xs">✓</span>}
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="hidden"
+                      checked={selectedSubEvents.includes(subEvent.label)}
+                      onChange={() => {
+                        if (selectedSubEvents.includes(subEvent.label)) {
+                          setSelectedSubEvents(selectedSubEvents.filter(id => id !== subEvent.label));
+                        } else {
+                          setSelectedSubEvents([...selectedSubEvents, subEvent.label]);
+                        }
+                      }}
+                    />
+                    <span className="text-gray-300 group-hover:text-white transition-colors">{subEvent.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Team Registration Form */}
           {event.event_type === 'team' && (
