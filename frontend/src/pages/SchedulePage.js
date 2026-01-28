@@ -62,8 +62,14 @@ const SchedulePage = () => {
 
                     const colors = {
                         'AKANKSHA': '#d946ef',
-                        'AHWAAN': '#f97316',
-                        'ANWESH': '#06b6d4'
+                        'AHWAAN': '#06b6d4', // Swapped color to match Anwesh (Blue)
+                        'ANWESH': '#f97316'  // Swapped color to match Ahwaan (Orange)
+                    };
+
+                    const displayNames = {
+                        'AKANKSHA': 'AKANKSHA',
+                        'AHWAAN': 'ANWESH', // Swapped label
+                        'ANWESH': 'AHWAAN'  // Swapped label
                     };
 
                     return (
@@ -76,7 +82,7 @@ const SchedulePage = () => {
                         >
                             <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
                                 <Calendar className="w-8 h-8" style={{ color: colors[subfest] }} />
-                                {subfest} Schedule
+                                {displayNames[subfest]} Schedule
                             </h2>
 
                             {subfestItems.length === 0 ? (
