@@ -25,6 +25,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showCoordinatorManager, setShowCoordinatorManager] = useState(false);
   const [coordinatorData, setCoordinatorData] = useState(null);
+  const [showScheduleManager, setShowScheduleManager] = useState(false);
 
   const fetchCoordinatorData = async () => {
     try {
@@ -38,6 +39,11 @@ const AdminDashboard = () => {
   const openCoordinatorManager = () => {
     fetchCoordinatorData();
     setShowCoordinatorManager(true);
+  };
+
+  const openScheduleManager = () => {
+    fetchCoordinatorData();
+    setShowScheduleManager(true);
   };
 
 
@@ -326,6 +332,37 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleSaveSchedule = async () => {
+    try {
+      await axios.post(`${API_URL}/system/coordinators`, coordinatorData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Schedule updated successfully!');
+      setShowScheduleManager(false);
+    } catch (error) {
+      toast.error('Failed to save schedule');
+    }
+  };
+
+  const addScheduleItem = () => {
+    setCoordinatorData({
+      ...coordinatorData,
+      schedule: [...(coordinatorData.schedule || []), { date: "", time: "", venue: "", event: "" }]
+    });
+  };
+
+  const removeScheduleItem = (index) => {
+    const newSchedule = [...coordinatorData.schedule];
+    newSchedule.splice(index, 1);
+    setCoordinatorData({ ...coordinatorData, schedule: newSchedule });
+  };
+
+  const updateScheduleItem = (index, field, value) => {
+    const newSchedule = [...coordinatorData.schedule];
+    newSchedule[index] = { ...newSchedule[index], [field]: value };
+    setCoordinatorData({ ...coordinatorData, schedule: newSchedule });
+  };
+
   const addCoordinatorGroup = () => {
     setCoordinatorData({
       ...coordinatorData,
@@ -568,6 +605,16 @@ const AdminDashboard = () => {
               <Settings className="w-8 h-8 text-yellow-400 mb-3 group-hover:scale-110 transition-transform" />
               <h3 className="text-lg font-bold mb-2">Manage Coordinators</h3>
               <p className="text-gray-400 text-sm">Edit contact details</p>
+            </button>
+
+            <button
+              onClick={openScheduleManager}
+              className="glass p-6 rounded-none text-left hover:bg-white/5 transition-colors group"
+              data-testid="manage-schedule-button"
+            >
+              <Calendar className="w-8 h-8 text-pink-400 mb-3 group-hover:scale-110 transition-transform" />
+              <h3 className="text-lg font-bold mb-2">Manage Schedule</h3>
+              <p className="text-gray-400 text-sm">Edit event timings</p>
             </button>
 
             <button
@@ -1133,6 +1180,79 @@ const AdminDashboard = () => {
                 <div className="flex gap-4">
                   <button onClick={() => setShowCoordinatorManager(false)} className="px-6 py-3 glass hover:bg-white/10 transition-colors">Cancel</button>
                   <button onClick={handleSaveCoordinators} className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider transition-colors">Save Changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Schedule Manager Modal */}
+      {
+        showScheduleManager && coordinatorData && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="schedule-manager-modal">
+            <div className="glass p-8 rounded-none max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <h2 className="text-3xl font-black mb-6">Manage Schedule</h2>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-12 gap-4 font-bold text-gray-400 uppercase text-sm mb-2 px-2">
+                  <div className="col-span-3">Date</div>
+                  <div className="col-span-3">Time</div>
+                  <div className="col-span-3">Venue</div>
+                  <div className="col-span-2">Event</div>
+                  <div className="col-span-1"></div>
+                </div>
+
+                {(coordinatorData.schedule || []).map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-4 items-center bg-white/5 p-2 border border-white/10">
+                    <div className="col-span-3">
+                      <input
+                        type="text"
+                        placeholder="Date"
+                        className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
+                        value={item.date}
+                        onChange={(e) => updateScheduleItem(idx, 'date', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <input
+                        type="text"
+                        placeholder="Time"
+                        className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
+                        value={item.time}
+                        onChange={(e) => updateScheduleItem(idx, 'time', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <input
+                        type="text"
+                        placeholder="Venue"
+                        className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
+                        value={item.venue}
+                        onChange={(e) => updateScheduleItem(idx, 'venue', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="text"
+                        placeholder="Event"
+                        className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
+                        value={item.event}
+                        onChange={(e) => updateScheduleItem(idx, 'event', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-1 text-right">
+                      <button onClick={() => removeScheduleItem(idx)} className="text-red-400 hover:text-red-300 p-2">✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex justify-between items-center pt-6 border-t border-white/10">
+                <button onClick={addScheduleItem} className="px-4 py-2 border border-white/20 hover:bg-white/10 transition-colors pointer-events-auto">+ Add Entry</button>
+                <div className="flex gap-4">
+                  <button onClick={() => setShowScheduleManager(false)} className="px-6 py-3 glass hover:bg-white/10 transition-colors">Cancel</button>
+                  <button onClick={handleSaveSchedule} className="px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider transition-colors">Save Schedule</button>
                 </div>
               </div>
             </div>

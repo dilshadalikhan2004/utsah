@@ -19,6 +19,7 @@ import GalleryPage from './pages/GalleryPage';
 import ShortlistPage from './pages/ShortlistPage';
 import NotificationsPage from './pages/NotificationsPage';
 import CoordinatorsPage from './pages/CoordinatorsPage';
+import SchedulePage from './pages/SchedulePage';
 
 // Components
 import LoadingScreen from './components/LoadingScreen/LoadingScreen';
@@ -67,6 +68,7 @@ function AppRoutes() {
       <Route path="/my-registrations" element={<ProtectedRoute><MyRegistrationsPage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="/coordinators" element={<ProtectedRoute><CoordinatorsPage /></ProtectedRoute>} />
+      <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
 
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
     </Routes>

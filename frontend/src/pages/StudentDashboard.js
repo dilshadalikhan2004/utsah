@@ -242,6 +242,16 @@ const StudentDashboard = () => {
             </button>
 
             <button
+              onClick={() => navigate('/schedule')}
+              className="glass p-6 rounded-none text-left hover:bg-white/5 transition-colors group"
+              data-testid="view-schedule-button"
+            >
+              <Calendar className="w-8 h-8 text-cyan-400 mb-3 group-hover:scale-110 transition-transform" />
+              <h3 className="text-xl font-bold mb-2">View Schedule</h3>
+              <p className="text-gray-400 text-sm">Check timings & venues</p>
+            </button>
+
+            <button
               onClick={() => navigate('/coordinators')}
               className="glass p-6 rounded-none text-left hover:bg-white/5 transition-colors group"
               data-testid="view-coordinators-button"
@@ -281,7 +291,7 @@ const StudentDashboard = () => {
               className="mb-8"
             >
               <button
-                onClick={() => navigate('/coordinators')}
+                onClick={() => navigate('/schedule')}
                 className="w-full glass p-8 border-l-4 border-[#d946ef] text-left hover:bg-white/5 transition-colors group relative overflow-hidden"
               >
                 <div className="relative z-10">

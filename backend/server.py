@@ -888,7 +888,7 @@ class SystemData(BaseModel):
     type: str = "general_info"
     rules: List[str] = []
     additional_rules: List[str] = []
-    schedule: List[Dict[str, str]] = []
+    schedule: List[Dict[str, Any]] = []
     coordinators: List[Dict[str, Any]] = []
 
 @api_router.get("/system/coordinators", response_model=SystemData)
