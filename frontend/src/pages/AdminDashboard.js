@@ -26,6 +26,7 @@ const AdminDashboard = () => {
   const [showCoordinatorManager, setShowCoordinatorManager] = useState(false);
   const [coordinatorData, setCoordinatorData] = useState(null);
   const [showScheduleManager, setShowScheduleManager] = useState(false);
+  const [activeScheduleTab, setActiveScheduleTab] = useState('AKANKSHA');
 
   const fetchCoordinatorData = async () => {
     try {
@@ -347,7 +348,13 @@ const AdminDashboard = () => {
   const addScheduleItem = () => {
     setCoordinatorData({
       ...coordinatorData,
-      schedule: [...(coordinatorData.schedule || []), { date: "", time: "", venue: "", event: "" }]
+      schedule: [...(coordinatorData.schedule || []), {
+        date: "",
+        time: "",
+        venue: "",
+        event: "",
+        category: activeScheduleTab
+      }]
     });
   };
 
@@ -1194,6 +1201,22 @@ const AdminDashboard = () => {
             <div className="glass p-8 rounded-none max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <h2 className="text-3xl font-black mb-6">Manage Schedule</h2>
 
+              {/* Tabs */}
+              <div className="flex gap-2 mb-8 border-b border-white/10 pb-2">
+                {['AKANKSHA', 'AHWAAN', 'ANWESH'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveScheduleTab(tab)}
+                    className={`px-6 py-2 rounded-none font-bold uppercase transition-colors ${activeScheduleTab === tab
+                      ? 'bg-[#d946ef] text-white'
+                      : 'glass text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
               <div className="space-y-4">
                 <div className="grid grid-cols-12 gap-4 font-bold text-gray-400 uppercase text-sm mb-2 px-2">
                   <div className="col-span-3">Date</div>
@@ -1203,49 +1226,61 @@ const AdminDashboard = () => {
                   <div className="col-span-1"></div>
                 </div>
 
-                {(coordinatorData.schedule || []).map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-4 items-center bg-white/5 p-2 border border-white/10">
-                    <div className="col-span-3">
-                      <input
-                        type="text"
-                        placeholder="Date"
-                        className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
-                        value={item.date}
-                        onChange={(e) => updateScheduleItem(idx, 'date', e.target.value)}
-                      />
+                {(coordinatorData.schedule || [])
+                  .map((item, originalIndex) => ({ ...item, originalIndex }))
+                  // Default to AKANKSHA if no category (backward compatibility)
+                  .filter(item => (item.category === activeScheduleTab) || (!item.category && activeScheduleTab === 'AKANKSHA'))
+                  .map((item, idx) => (
+                    <div key={item.originalIndex} className="grid grid-cols-12 gap-4 items-center bg-white/5 p-2 border border-white/10">
+                      <div className="col-span-3">
+                        <input
+                          type="text"
+                          placeholder="Date"
+                          className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
+                          value={item.date}
+                          onChange={(e) => updateScheduleItem(idx, 'date', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="text"
+                          placeholder="Time"
+                          className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
+                          value={item.time}
+                          onChange={(e) => updateScheduleItem(idx, 'time', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="text"
+                          placeholder="Venue"
+                          className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
+                          value={item.venue}
+                          onChange={(e) => updateScheduleItem(item.originalIndex, 'venue', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="text"
+                          placeholder="Event"
+                          className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
+                          value={item.event}
+                          onChange={(e) => updateScheduleItem(item.originalIndex, 'event', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-1 text-right">
+                        <button onClick={() => removeScheduleItem(item.originalIndex)} className="text-red-400 hover:text-red-300 p-2">✕</button>
+                      </div>
                     </div>
-                    <div className="col-span-3">
-                      <input
-                        type="text"
-                        placeholder="Time"
-                        className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
-                        value={item.time}
-                        onChange={(e) => updateScheduleItem(idx, 'time', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <input
-                        type="text"
-                        placeholder="Venue"
-                        className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
-                        value={item.venue}
-                        onChange={(e) => updateScheduleItem(idx, 'venue', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="text"
-                        placeholder="Event"
-                        className="w-full bg-transparent p-2 text-sm focus:outline-none border-b border-transparent focus:border-white/50"
-                        value={item.event}
-                        onChange={(e) => updateScheduleItem(idx, 'event', e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-1 text-right">
-                      <button onClick={() => removeScheduleItem(idx)} className="text-red-400 hover:text-red-300 p-2">✕</button>
-                    </div>
+                  ))}
+
+                {/* Empty State */}
+                {(coordinatorData.schedule || []).filter(item => (item.category === activeScheduleTab) || (!item.category && activeScheduleTab === 'AKANKSHA')).length === 0 && (
+                  <div className="text-center py-8 text-gray-500 italic">
+                    <p>No schedule entries for {activeScheduleTab}</p>
+                    <p className="text-xs mt-1">Click "Add Entry" to create one.</p>
                   </div>
-                ))}
+                )}
               </div>
 
               <div className="mt-6 flex justify-between items-center pt-6 border-t border-white/10">

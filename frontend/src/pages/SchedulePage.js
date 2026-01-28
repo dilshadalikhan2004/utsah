@@ -55,63 +55,82 @@ const SchedulePage = () => {
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-12">
 
-                {/* Schedule Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass p-8 rounded-none border-l-4 border-[#06b6d4]"
-                >
-                    <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                        <Calendar className="w-8 h-8 text-[#06b6d4]" />
-                        Event Schedule & Venues
-                    </h2>
+                {['AKANKSHA', 'AHWAAN', 'ANWESH'].map((subfest) => {
+                    const subfestItems = (data.schedule || []).filter(item =>
+                        item.category === subfest || (!item.category && subfest === 'AKANKSHA')
+                    );
 
-                    {(!data.schedule || data.schedule.length === 0) ? (
-                        <p className="text-gray-400">No schedule published yet.</p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-white/20 text-gray-400 uppercase text-sm">
-                                        <th className="py-4 px-4">Date</th>
-                                        <th className="py-4 px-4">Time</th>
-                                        <th className="py-4 px-4">Venue</th>
-                                        <th className="py-4 px-4">Event</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.schedule.map((item, idx) => (
-                                        <tr key={idx} className="border-b border-white/10 hover:bg-white/5">
-                                            <td className="py-4 px-4 font-mono text-[#06b6d4]">{item.date}</td>
-                                            <td className="py-4 px-4 flex items-center gap-2">
-                                                <Clock className="w-4 h-4 text-gray-500" />
-                                                {item.time}
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <div className="flex items-center gap-2">
-                                                    <MapPin className="w-4 h-4 text-gray-500" />
-                                                    {item.venue}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-4 font-bold">{item.event}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </motion.div>
+                    const colors = {
+                        'AKANKSHA': '#d946ef',
+                        'AHWAAN': '#f97316',
+                        'ANWESH': '#06b6d4'
+                    };
+
+                    return (
+                        <motion.div
+                            key={subfest}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`glass p-8 rounded-none border-l-4`}
+                            style={{ borderColor: colors[subfest] }}
+                        >
+                            <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+                                <Calendar className="w-8 h-8" style={{ color: colors[subfest] }} />
+                                {subfest} Schedule
+                            </h2>
+
+                            {subfestItems.length === 0 ? (
+                                <div className="text-center py-8 glass bg-white/5 mx-auto max-w-lg">
+                                    <Clock className="w-12 h-12 mx-auto mb-4 text-gray-500" />
+                                    <p className="text-xl font-bold text-gray-300">Schedule to be released soon</p>
+                                    <p className="text-gray-500 text-sm mt-2">Stay tuned for updates!</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-white/20 text-gray-400 uppercase text-sm">
+                                                <th className="py-4 px-4">Date</th>
+                                                <th className="py-4 px-4">Time</th>
+                                                <th className="py-4 px-4">Venue</th>
+                                                <th className="py-4 px-4">Event</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {subfestItems.map((item, idx) => (
+                                                <tr key={idx} className="border-b border-white/10 hover:bg-white/5">
+                                                    <td className="py-4 px-4 font-mono" style={{ color: colors[subfest] }}>{item.date}</td>
+                                                    <td className="py-4 px-4 flex items-center gap-2">
+                                                        <Clock className="w-4 h-4 text-gray-500" />
+                                                        {item.time}
+                                                    </td>
+                                                    <td className="py-4 px-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <MapPin className="w-4 h-4 text-gray-500" />
+                                                            {item.venue}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-4 font-bold">{item.event}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </motion.div>
+                    );
+                })}
 
                 {/* Rules Section */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="glass p-8 rounded-none border-l-4 border-[#f97316]"
+                    className="glass p-8 rounded-none border-l-4 border-[#8b5cf6]"
                 >
                     <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                        <ScrollText className="w-8 h-8 text-[#f97316]" />
-                        Rules & Regulations
+                        <ScrollText className="w-8 h-8 text-[#8b5cf6]" />
+                        General Rules & Guidelines
                     </h2>
 
                     <div className="space-y-6 text-gray-300">
@@ -123,7 +142,7 @@ const SchedulePage = () => {
 
                         {data.additional_rules && data.additional_rules.length > 0 && (
                             <div className="bg-white/5 p-6 rounded-none mt-4">
-                                <h3 className="text-[#f97316] font-bold mb-4 flex items-center gap-2">
+                                <h3 className="text-[#8b5cf6] font-bold mb-4 flex items-center gap-2">
                                     <AlertCircle className="w-5 h-5" />
                                     Additional Guidelines
                                 </h3>
