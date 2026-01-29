@@ -353,7 +353,7 @@ const AdminDashboard = () => {
         time: "",
         venue: "",
         event: "",
-        category: activeScheduleTab
+        category: activeScheduleTab === 'AHWAAN' ? 'ANWESH' : activeScheduleTab === 'ANWESH' ? 'AHWAAN' : activeScheduleTab
       }]
     });
   };
@@ -1242,8 +1242,13 @@ const AdminDashboard = () => {
 
                 {(coordinatorData.schedule || [])
                   .map((item, originalIndex) => ({ ...item, originalIndex }))
-                  // Default to AKANKSHA if no category (backward compatibility)
-                  .filter(item => (item.category === activeScheduleTab) || (!item.category && activeScheduleTab === 'AKANKSHA'))
+                  .filter(item => {
+                    let targetCategory = activeScheduleTab;
+                    if (activeScheduleTab === 'AHWAAN') targetCategory = 'ANWESH';
+                    else if (activeScheduleTab === 'ANWESH') targetCategory = 'AHWAAN';
+
+                    return (item.category === targetCategory) || (!item.category && targetCategory === 'AKANKSHA');
+                  })
                   .map((item, idx) => (
                     <div key={item.originalIndex} className="grid grid-cols-12 gap-4 items-center bg-white/5 p-2 border border-white/10">
                       <div className="col-span-3">

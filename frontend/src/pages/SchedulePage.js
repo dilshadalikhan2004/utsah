@@ -127,40 +127,7 @@ const SchedulePage = () => {
                     );
                 })}
 
-                {/* Rules Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="glass p-8 rounded-none border-l-4 border-[#8b5cf6]"
-                >
-                    <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                        <ScrollText className="w-8 h-8 text-[#8b5cf6]" />
-                        General Rules & Guidelines
-                    </h2>
 
-                    <div className="space-y-6 text-gray-300">
-                        <ul className="list-disc pl-6 space-y-2">
-                            {data.rules && data.rules.map((rule, idx) => (
-                                <li key={idx} className="leading-relaxed">{rule}</li>
-                            ))}
-                        </ul>
-
-                        {data.additional_rules && data.additional_rules.length > 0 && (
-                            <div className="bg-white/5 p-6 rounded-none mt-4">
-                                <h3 className="text-[#8b5cf6] font-bold mb-4 flex items-center gap-2">
-                                    <AlertCircle className="w-5 h-5" />
-                                    Additional Guidelines
-                                </h3>
-                                <ul className="list-disc pl-6 space-y-2">
-                                    {data.additional_rules.map((rule, idx) => (
-                                        <li key={idx} className="leading-relaxed">{rule}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-                </motion.div>
 
             </div>
         </div>

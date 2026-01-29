@@ -55,39 +55,7 @@ const CoordinatorsPage = () => {
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-12">
 
-                {/* Rules Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass p-8 rounded-none border-l-4 border-[#f97316]"
-                >
-                    <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                        <ScrollText className="w-8 h-8 text-[#f97316]" />
-                        Audition Rules & Regulations
-                    </h2>
 
-                    <div className="space-y-6 text-gray-300">
-                        <ul className="list-disc pl-6 space-y-2">
-                            {data.rules && data.rules.map((rule, idx) => (
-                                <li key={idx} className="leading-relaxed">{rule}</li>
-                            ))}
-                        </ul>
-
-                        {data.additional_rules && data.additional_rules.length > 0 && (
-                            <div className="bg-white/5 p-6 rounded-none mt-4">
-                                <h3 className="text-[#f97316] font-bold mb-4 flex items-center gap-2">
-                                    <AlertCircle className="w-5 h-5" />
-                                    Additional Guidelines
-                                </h3>
-                                <ul className="list-disc pl-6 space-y-2">
-                                    {data.additional_rules.map((rule, idx) => (
-                                        <li key={idx} className="leading-relaxed">{rule}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-                </motion.div>
 
                 {/* Schedule Section */}
                 <motion.div
