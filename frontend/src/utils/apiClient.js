@@ -96,7 +96,7 @@ apiClient.interceptors.response.use(
 // Wake up the server on app load (ping endpoint)
 export const wakeUpServer = async () => {
     try {
-        await axios.get(`${API_URL}/api/events`, { timeout: 10000 });
+        await axios.get(`${API_URL}/health`, { timeout: 10000 });
         console.log('Server connection verified');
         return true;
     } catch (error) {

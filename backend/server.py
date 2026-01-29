@@ -54,8 +54,11 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 
+from fastapi.middleware.gzip import GZipMiddleware
+
 # Create the main app without a prefix
 app = FastAPI()
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 @app.get("/health")
 async def health_check():
@@ -875,7 +878,6 @@ async def export_registrations(format: str = Query("csv"), admin: dict = Depends
     df = pd.DataFrame(registrations)
     
     # Select columns
-    # Select columns
     columns = ["id", "event_id", "registered_at", "full_name", "email", "mobile_number", "roll_number", "selected_sub_events"]
     
     # Ensure all columns exist
@@ -883,6 +885,10 @@ async def export_registrations(format: str = Query("csv"), admin: dict = Depends
         if col not in df.columns:
             df[col] = None
             
+    # Format selected_sub_events list to readable string
+    if "selected_sub_events" in df.columns:
+        df['selected_sub_events'] = df['selected_sub_events'].apply(lambda x: ", ".join(x) if isinstance(x, list) else x)
+
     df = df[columns]
     
     output = io.StringIO()
