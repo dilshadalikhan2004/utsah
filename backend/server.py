@@ -688,17 +688,24 @@ async def get_my_registrations(user: dict = Depends(get_current_user)):
 async def get_all_registrations(admin: dict = Depends(get_admin_user)):
     registrations = await db.registrations.find({}, {"_id": 0}).to_list(10000)
     
+    if not registrations:
+        return []
+
+    # Batch fetch users logic
+    user_emails = [reg.get("student_email") for reg in registrations if reg.get("student_email")]
+    users_cursor = db.users.find({"email": {"$in": user_emails}}, {"_id": 0})
+    users_map = {user["email"]: user async for user in users_cursor}
+
     for reg in registrations:
-        if reg.get("student_email"):
-            user = await db.users.find_one({"email": reg["student_email"]}, {"_id": 0})
-            if user:
-                reg.update({
-                    "full_name": user.get("full_name"),
-                    "roll_number": user.get("roll_number"),
-                    "department": user.get("department"),
-                    "year": user.get("year"),
-                    "mobile_number": user.get("mobile_number")
-                })
+        user = users_map.get(reg.get("student_email"))
+        if user:
+            reg.update({
+                "full_name": user.get("full_name"),
+                "roll_number": user.get("roll_number"),
+                "department": user.get("department"),
+                "year": user.get("year"),
+                "mobile_number": user.get("mobile_number")
+            })
     return registrations
 
 @api_router.delete("/registrations/{registration_id}")
@@ -727,30 +734,39 @@ async def export_registrations(event_id: Optional[str] = None, admin: dict = Dep
     if not registrations:
         return Response(content="No registrations found", media_type="text/csv")
 
+    # Batch fetch users to optimize speed
+    user_emails = [reg.get("student_email") for reg in registrations if reg.get("student_email")]
+    users_cursor = db.users.find({"email": {"$in": user_emails}}, {"_id": 0})
+    users_map = {user["email"]: user async for user in users_cursor}
+
     output = io.StringIO()
     writer = csv.writer(output)
     
     # Headers
-    headers = ["Full Name", "Event", "Sub-Fest", "Date", "Roll No", "Dept", "Year", "Mobile", "Email", "Team Members"]
+    headers = ["Full Name", "Event", "Sub-Fest", "Date", "Roll No", "Dept", "Year", "Mobile", "Email", "Team Members", "Robotics Sub-Events"]
     writer.writerow(headers)
     
     for reg in registrations:
-        # Enrichment
-        if reg.get("student_email"):
-            user = await db.users.find_one({"email": reg["student_email"]}, {"_id": 0})
-            if user:
-                reg.update({
-                    "full_name": user.get("full_name"),
-                    "roll_number": user.get("roll_number"),
-                    "department": user.get("department"),
-                    "year": user.get("year"),
-                    "mobile_number": user.get("mobile_number")
-                })
+        # Enrichment from map
+        user = users_map.get(reg.get("student_email"))
+        if user:
+            reg.update({
+                "full_name": user.get("full_name"),
+                "roll_number": user.get("roll_number"),
+                "department": user.get("department"),
+                "year": user.get("year"),
+                "mobile_number": user.get("mobile_number")
+            })
                 
         team_str = ""
         if reg.get('team_members'):
             team_str = "; ".join([f"{m['full_name']} ({m['roll_number']})" for m in reg['team_members']])
-            
+        
+        # Format sub-events
+        sub_events_str = ""
+        if reg.get('selected_sub_events'):
+            sub_events_str = ", ".join(reg['selected_sub_events']) if isinstance(reg['selected_sub_events'], list) else str(reg['selected_sub_events'])
+
         writer.writerow([
             reg.get('full_name', ''),
             reg.get('event_name', ''),
@@ -761,7 +777,8 @@ async def export_registrations(event_id: Optional[str] = None, admin: dict = Dep
             reg.get('year', ''),
             reg.get('mobile_number', ''),
             reg.get('student_email', ''),
-            team_str
+            team_str,
+            sub_events_str
         ])
 
         
