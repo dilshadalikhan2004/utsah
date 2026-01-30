@@ -215,6 +215,33 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleBulkToggle = async (subFest, shouldOpen) => {
+    if (!window.confirm(`Are you sure you want to ${shouldOpen ? 'OPEN' : 'CLOSE'} registrations for ALL ${subFest} events?`)) return;
+
+    try {
+      const subFestEvents = events.filter(e => e.sub_fest === subFest);
+      const updates = subFestEvents.map(event => {
+        const payload = { is_registration_open: shouldOpen };
+        if (shouldOpen) {
+          const currentDeadline = new Date(event.registration_deadline);
+          if (currentDeadline < new Date()) {
+            payload.registration_deadline = '2026-02-15T23:59:59.000Z';
+          }
+        }
+        return axios.put(`${API_URL}/events/${event.id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      });
+
+      await Promise.all(updates);
+      toast.success(`All ${subFest.split('-')[1]} registrations ${shouldOpen ? 'opened' : 'closed'} successfully`);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update some events");
+    }
+  };
+
   const handleCreateNotification = async (e) => {
     e.preventDefault();
     try {
@@ -681,7 +708,25 @@ const AdminDashboard = () => {
 
                 return (
                   <div key={subFest} className="mb-8">
-                    <h3 className={`text-xl font-bold mb-4 ${subFestColor}`}>{subFestTitle}</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className={`text-xl font-bold ${subFestColor}`}>{subFestTitle}</h3>
+                      {subFest === 'SPORTS-AHWAAN' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleBulkToggle(subFest, true)}
+                            className="px-3 py-1 bg-green-500/20 text-green-500 text-xs font-bold uppercase rounded border border-green-500/30 hover:bg-green-500/30 transition-colors"
+                          >
+                            Open All
+                          </button>
+                          <button
+                            onClick={() => handleBulkToggle(subFest, false)}
+                            className="px-3 py-1 bg-red-500/20 text-red-500 text-xs font-bold uppercase rounded border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                          >
+                            Close All
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <div className="glass rounded-none overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full">

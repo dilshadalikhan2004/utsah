@@ -615,7 +615,7 @@ async def register_for_event(registration: EventRegistration, user: dict = Depen
     SUB_FEST_LIMITS = {
         "TECHNOLOGY-ANWESH": 2,
         "CULTURAL-AKANKSHA": 2,
-        "SPORTS-AHWAAN": 2  # Default limit
+        "SPORTS-AHWAAN": 4
     }
     
     sub_fest = event.get('sub_fest')

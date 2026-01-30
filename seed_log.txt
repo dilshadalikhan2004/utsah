@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "c:\Users\LENOVO\Desktop\utsah2026\backend\seed_ahwaan.py", line 4, in <module>
+    from motor.motor_asyncio import AsyncIOMotorClient
+ModuleNotFoundError: No module named 'motor'
