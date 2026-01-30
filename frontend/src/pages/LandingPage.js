@@ -61,6 +61,14 @@ const LandingPage = () => {
             <Code className="w-4 h-4" />
             <span>Credits</span>
           </button>
+
+          <button
+            onClick={() => navigate('/shortlist')}
+            className="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-[#d946ef] hover:text-white transition-colors uppercase tracking-wider"
+          >
+            <Crown className="w-4 h-4" />
+            <span>Shortlist</span>
+          </button>
           <div className="w-px h-6 bg-white/10 hidden md:block"></div>
 
           {user ? (
