@@ -840,8 +840,9 @@ async def get_gallery(sub_fest: Optional[str] = None):
     return [GalleryImageResponse(**img) for img in images]
 
 # Shortlist endpoints
+# Shortlist endpoints
 @api_router.post("/shortlist/upload")
-async def upload_shortlist(file: UploadFile = File(...), admin: dict = Depends(get_admin_user)):
+async def upload_shortlist(file: UploadFile = File(...), title: str = Form(...), admin: dict = Depends(get_admin_user)):
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Only Excel files allowed")
     
@@ -849,25 +850,53 @@ async def upload_shortlist(file: UploadFile = File(...), admin: dict = Depends(g
         contents = await file.read()
         df = pd.read_excel(BytesIO(contents))
         
-        # Clear existing shortlist
-        await db.shortlist.delete_many({})
+        # Clean dataframe - replace nan with None/empty string for JSON compatibility
+        df = df.where(pd.notnull(df), None)
         
-        # Insert new shortlist
+        # Insert new shortlist document
         records = df.to_dict('records')
-        for record in records:
-            record['id'] = f"short-{record.get('roll_number', '')}"
         
-        if records:
-            await db.shortlist.insert_many(records)
+        shortlist_id = f"list-{secrets.token_hex(4)}"
+        shortlist_doc = {
+            "id": shortlist_id,
+            "title": title,
+            "uploaded_at": datetime.now(timezone.utc).isoformat(),
+            "entries": records
+        }
         
-        return {"message": f"Uploaded {len(records)} entries", "count": len(records)}
+        await db.shortlists.insert_one(shortlist_doc)
+        
+        return {"message": f"Uploaded '{title}' with {len(records)} entries", "count": len(records), "id": shortlist_id}
     except Exception as e:
+        logger.error(f"Error processing upload: {e}")
         raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
 
-@api_router.get("/shortlist")
-async def get_shortlist():
-    shortlist = await db.shortlist.find({}, {"_id": 0}).to_list(10000)
+@api_router.get("/shortlists")
+async def get_shortlists():
+    # Return list of shortlists without the full entries data to save bandwidth
+    shortlists = await db.shortlists.find({}, {"entries": 0, "_id": 0}).sort("uploaded_at", -1).to_list(100)
+    for s in shortlists:
+        if isinstance(s.get('uploaded_at'), str):
+            s['uploaded_at'] = datetime.fromisoformat(s['uploaded_at'])
+    return shortlists
+
+@api_router.get("/shortlists/{shortlist_id}")
+async def get_shortlist_details(shortlist_id: str):
+    shortlist = await db.shortlists.find_one({"id": shortlist_id}, {"_id": 0})
+    if not shortlist:
+        raise HTTPException(status_code=404, detail="Shortlist not found")
+        
+    if isinstance(shortlist.get('uploaded_at'), str):
+        shortlist['uploaded_at'] = datetime.fromisoformat(shortlist['uploaded_at'])
+        
     return shortlist
+
+@api_router.delete("/shortlists/{shortlist_id}")
+async def delete_shortlist(shortlist_id: str, admin: dict = Depends(get_admin_user)):
+    result = await db.shortlists.delete_one({"id": shortlist_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Shortlist not found")
+    return {"message": "Shortlist deleted successfully"}
 
 # Data export endpoints
 @api_router.get("/export/registrations")

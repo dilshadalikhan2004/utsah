@@ -257,12 +257,21 @@ const AdminDashboard = () => {
     }
   };
 
+  const [shortlistTitle, setShortlistTitle] = useState('');
+
   const handleShortlistUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    e.preventDefault(); // Prevent form submission
+    const fileInput = document.getElementById('shortlist-file');
+    const file = fileInput?.files[0];
+
+    if (!file || !shortlistTitle) {
+      toast.error("Please provide both a title and a file");
+      return;
+    }
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('title', shortlistTitle);
 
     try {
       const response = await axios.post(`${API_URL}/shortlist/upload`, formData, {
@@ -272,8 +281,10 @@ const AdminDashboard = () => {
         }
       });
 
-      toast.success(`Uploaded ${response.data.count} entries successfully!`);
+      toast.success(response.data.message);
       setShowShortlistUpload(false);
+      setShortlistTitle('');
+      if (fileInput) fileInput.value = ''; // Reset file input
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to upload shortlist');
     }
@@ -1047,19 +1058,36 @@ const AdminDashboard = () => {
               <h2 className="text-3xl font-black mb-6">Upload Shortlist</h2>
               <p className="text-gray-400 mb-6">Upload an Excel file with columns: name, roll_number, department, status</p>
               <input
+                type="text"
+                placeholder="Event/Round Title (e.g., Solo Song Final)"
+                value={shortlistTitle}
+                onChange={(e) => setShortlistTitle(e.target.value)}
+                className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-3 text-white mb-4"
+                data-testid="shortlist-title-input"
+              />
+              <input
+                id="shortlist-file"
                 type="file"
                 accept=".xlsx,.xls"
-                onChange={handleShortlistUpload}
                 className="w-full text-white"
                 data-testid="shortlist-file-input"
               />
-              <button
-                onClick={() => setShowShortlistUpload(false)}
-                className="mt-6 w-full px-6 py-3 glass hover:bg-white/10"
-                data-testid="cancel-shortlist-button"
-              >
-                Cancel
-              </button>
+              <div className="flex gap-4 mt-8">
+                <button
+                  onClick={() => setShowShortlistUpload(false)}
+                  className="flex-1 px-6 py-3 glass hover:bg-white/10"
+                  data-testid="cancel-shortlist-button"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleShortlistUpload}
+                  className="flex-1 px-6 py-3 bg-[#d946ef] hover:bg-[#ec4899] font-bold uppercase tracking-wider"
+                  data-testid="submit-shortlist-button"
+                >
+                  Upload
+                </button>
+              </div>
             </div>
           </div>
         )
