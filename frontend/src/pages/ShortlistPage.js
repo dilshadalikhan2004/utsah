@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Award, Search, Calendar, FileText, ChevronRight, X, Trash } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Award, Search, Calendar, FileText, ChevronRight, X, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 
