@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { ArrowLeft, Calendar, MapPin, Users, Clock, UserPlus } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, Clock, UserPlus, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -26,9 +26,9 @@ const EventDetailsPage = () => {
   const [selectedSubEvents, setSelectedSubEvents] = useState([]);
 
   const roboticsSubEvents = [
-    { id: 'line_follower', label: 'Line Follower' },
-    { id: 'robo_racer', label: 'Robo Racer' },
-    { id: 'robo_soccer', label: 'Robo Soccer' }
+    { id: 'line_follower', label: 'Line Follower', pdf: '/pdfs/line_follower_rules.pdf' },
+    { id: 'robo_racer', label: 'Robo Racer', pdf: '/pdfs/robo_racer_rules.pdf' },
+    { id: 'robo_soccer', label: 'Robo Soccer', pdf: '/pdfs/robo_soccer_rules.pdf' }
   ];
 
   useEffect(() => {
@@ -205,32 +205,77 @@ const EventDetailsPage = () => {
             </div>
           </div>
 
+
+          {/* Downloads / Rulebooks Section (Generic) */}
+          {event.rulebooks && event.rulebooks.length > 0 && !event.name.toLowerCase().includes('robotics') && (
+            <div className="glass p-6 rounded-none mb-8">
+              <h3 className="text-xl font-bold mb-4">Downloads</h3>
+              <div className="flex flex-wrap gap-4">
+                {event.rulebooks.map((rb, idx) => (
+                  <a
+                    key={idx}
+                    href={rb.url}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 glass hover:bg-white/10 transition-colors rounded text-[#d946ef]"
+                  >
+                    <FileText className="w-4 h-4" />
+                    {rb.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Robotics Sub-Events Selection */}
           {event.name.toLowerCase().includes('robotics') && (
             <div className="glass p-6 rounded-none mb-8">
               <h3 className="text-xl font-bold mb-4">Select Categories</h3>
               <p className="text-sm text-gray-400 mb-4">Choose the categories you want to participate in:</p>
               <div className="space-y-3">
-                {roboticsSubEvents.map((subEvent) => (
-                  <label key={subEvent.id} className="flex items-center gap-3 cursor-pointer group">
-                    <div className={`w-5 h-5 border border-white/30 flex items-center justify-center transition-colors ${selectedSubEvents.includes(subEvent.label) ? 'bg-[#d946ef] border-[#d946ef]' : 'group-hover:border-white'}`}>
-                      {selectedSubEvents.includes(subEvent.label) && <span className="text-white text-xs">✓</span>}
+                {roboticsSubEvents.map((subEvent) => {
+                  // Check for dynamic rulebook upload
+                  const uploadedRulebook = event.rulebooks?.find(rb =>
+                    rb.title.toLowerCase() === subEvent.label.toLowerCase() ||
+                    rb.title.toLowerCase().includes(subEvent.label.toLowerCase())
+                  );
+                  const pdfLink = uploadedRulebook ? uploadedRulebook.url : subEvent.pdf;
+
+                  return (
+                    <div key={subEvent.id} className="flex items-center justify-between p-2 hover:bg-white/5 transition-colors rounded">
+                      <label className="flex items-center gap-3 cursor-pointer flex-1">
+                        <div className={`w-5 h-5 border border-white/30 flex items-center justify-center transition-colors ${selectedSubEvents.includes(subEvent.label) ? 'bg-[#d946ef] border-[#d946ef]' : 'hover:border-white'}`}>
+                          {selectedSubEvents.includes(subEvent.label) && <span className="text-white text-xs">✓</span>}
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={selectedSubEvents.includes(subEvent.label)}
+                          onChange={() => {
+                            if (selectedSubEvents.includes(subEvent.label)) {
+                              setSelectedSubEvents(selectedSubEvents.filter(id => id !== subEvent.label));
+                            } else {
+                              setSelectedSubEvents([...selectedSubEvents, subEvent.label]);
+                            }
+                          }}
+                        />
+                        <span className="text-gray-300 hover:text-white transition-colors">{subEvent.label}</span>
+                      </label>
+                      <a
+                        href={pdfLink}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-xs text-[#d946ef] hover:text-[#d946ef]/80 transition-colors px-3 py-1 border border-[#d946ef]/30 rounded hover:bg-[#d946ef]/10"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <FileText className="w-3 h-3" />
+                        Rulebook
+                      </a>
                     </div>
-                    <input
-                      type="checkbox"
-                      className="hidden"
-                      checked={selectedSubEvents.includes(subEvent.label)}
-                      onChange={() => {
-                        if (selectedSubEvents.includes(subEvent.label)) {
-                          setSelectedSubEvents(selectedSubEvents.filter(id => id !== subEvent.label));
-                        } else {
-                          setSelectedSubEvents([...selectedSubEvents, subEvent.label]);
-                        }
-                      }}
-                    />
-                    <span className="text-gray-300 group-hover:text-white transition-colors">{subEvent.label}</span>
-                  </label>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

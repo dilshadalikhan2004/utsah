@@ -183,7 +183,8 @@ class EventCreate(BaseModel):
     min_team_size: Optional[int] = 1
     max_team_size: Optional[int] = 1
     max_events_per_student: int = 3
-    is_registration_open: bool = True  # Default to open
+    is_registration_open: bool = True
+    rulebooks: Optional[List[Dict[str, str]]] = [] # List of {title: "...", url: "..."}
 
 class EventResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -203,8 +204,8 @@ class EventResponse(BaseModel):
     min_team_size: int = 1
     max_team_size: int = 1
     max_events_per_student: int = 3
+    rulebooks: List[Dict[str, str]] = []
     created_at: Optional[datetime] = None
-
 
 class TeamMember(BaseModel):
     full_name: str
@@ -222,7 +223,7 @@ class TeamMember(BaseModel):
 
 class EventRegistration(BaseModel):
     event_id: str
-    team_members: Optional[List[TeamMember]] = None  # For team events, includes leader
+    team_members: Optional[List[TeamMember]] = None
     selected_sub_events: Optional[List[str]] = None
 
 class RegistrationResponse(BaseModel):
@@ -506,6 +507,7 @@ async def create_event(event: EventCreate, admin: dict = Depends(get_admin_user)
     event_dict['is_active'] = True
     event_dict['created_at'] = datetime.now(timezone.utc).isoformat()
     event_dict['registration_deadline'] = event.registration_deadline.isoformat()
+    event_dict['rulebooks'] = []
     
     # Check for duplicates
     existing = await db.events.find_one({"id": event_dict['id']})
@@ -516,6 +518,69 @@ async def create_event(event: EventCreate, admin: dict = Depends(get_admin_user)
     
     return EventResponse(**{**event_dict, 'registration_deadline': event.registration_deadline, 'created_at': datetime.fromisoformat(event_dict['created_at'])})
 
+@api_router.post("/events/{event_id}/rulebooks")
+async def upload_rulebook(
+    event_id: str, 
+    file: UploadFile = File(...), 
+    title: str = Form(...),
+    admin: dict = Depends(get_admin_user)
+):
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files allowed")
+    
+    # Check event exists
+    event = await db.events.find_one({"id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    # Create directory if it doesn't exist
+    pdf_dir = ROOT_DIR.parent / "frontend" / "public" / "pdfs"
+    pdf_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save file with unique name
+    safe_filename = f"{secrets.token_hex(4)}_{title.replace(' ', '_').lower()}.pdf"
+    file_path = pdf_dir / safe_filename
+    
+    try:
+        content = await file.read()
+        with open(file_path, 'wb') as f:
+            f.write(content)
+            
+        rulebook = {
+            "title": title,
+            "url": f"/pdfs/{safe_filename}",
+            "uploaded_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.events.update_one(
+            {"id": event_id},
+            {"$push": {"rulebooks": rulebook}}
+        )
+        
+        return rulebook
+    except Exception as e:
+        logger.error(f"Failed to upload rulebook: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save file")
+
+@api_router.delete("/events/{event_id}/rulebooks")
+async def delete_rulebook(
+    event_id: str,
+    url: str = Query(...),
+    admin: dict = Depends(get_admin_user)
+):
+    result = await db.events.update_one(
+        {"id": event_id},
+        {"$pull": {"rulebooks": {"url": url}}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Rulebook not found")
+        
+    # Optional: Delete file from disk
+    # We choose not to for safety, or implement carefully
+    
+    return {"message": "Rulebook deleted"}
+    
 @api_router.get("/events", response_model=List[EventResponse])
 async def get_events(sub_fest: Optional[str] = None):
     query = {"is_active": True}
@@ -531,6 +596,8 @@ async def get_events(sub_fest: Optional[str] = None):
                 event['registration_deadline'] = datetime.fromisoformat(event['registration_deadline'])
             if isinstance(event.get('created_at'), str):
                 event['created_at'] = datetime.fromisoformat(event['created_at'])
+            if 'rulebooks' not in event:
+                event['rulebooks'] = []
             processed_events.append(EventResponse(**event))
         except Exception as e:
             logger.error(f"Skipping corrupt event {event.get('id')}: {e}")
@@ -548,6 +615,8 @@ async def get_event(event_id: str):
         event['registration_deadline'] = datetime.fromisoformat(event['registration_deadline'])
     if isinstance(event['created_at'], str):
         event['created_at'] = datetime.fromisoformat(event['created_at'])
+    if 'rulebooks' not in event:
+        event['rulebooks'] = []
     
     return EventResponse(**event)
 
@@ -577,6 +646,8 @@ async def update_event(event_id: str, updates: EventUpdate, admin: dict = Depend
             updated['registration_deadline'] = datetime.fromisoformat(updated['registration_deadline'])
         if isinstance(updated.get('created_at'), str):
             updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+        if 'rulebooks' not in updated:
+            updated['rulebooks'] = []
     except Exception as e:
          logger.error(f"Error parsing date for updated event {event_id}: {e}")
     

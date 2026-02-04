@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { LogOut, Plus, Upload, Download, Bell, Calendar, Users, Trophy, Pencil, Trash, Settings, ArrowLeft, RefreshCw } from 'lucide-react';
+import { LogOut, Plus, Upload, Download, Bell, Calendar, Users, Trophy, Pencil, Trash, Settings, ArrowLeft, RefreshCw, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 
@@ -493,6 +493,76 @@ const AdminDashboard = () => {
     setShowRegistrationsModal(true);
   };
 
+  const [showRulebookManager, setShowRulebookManager] = useState(false);
+  const [selectedEventForRulebooks, setSelectedEventForRulebooks] = useState(null);
+  const [rulebookForm, setRulebookForm] = useState({ title: '' });
+
+  const handleOpenRulebookManager = (event) => {
+    setSelectedEventForRulebooks(event);
+    setShowRulebookManager(true);
+  };
+
+  const handleUploadRulebook = async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('rulebook-file');
+    const file = fileInput?.files[0];
+
+    if (!file || !rulebookForm.title) {
+      toast.error("Please provide both title and file");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', rulebookForm.title);
+
+    try {
+      const response = await axios.post(`${API_URL}/events/${selectedEventForRulebooks.id}/rulebooks`, formData, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+      });
+
+      toast.success("Rulebook uploaded");
+
+      // Update local state immediately
+      const updatedEvent = {
+        ...selectedEventForRulebooks,
+        rulebooks: [...(selectedEventForRulebooks.rulebooks || []), response.data]
+      };
+      setSelectedEventForRulebooks(updatedEvent);
+
+      // Update global events list
+      setEvents(events.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+
+      setRulebookForm({ title: '' });
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      toast.error('Failed to upload rulebook');
+    }
+  };
+
+  const handleDeleteRulebook = async (url) => {
+    if (!window.confirm("Are you sure you want to delete this rulebook?")) return;
+
+    try {
+      await axios.delete(`${API_URL}/events/${selectedEventForRulebooks.id}/rulebooks?url=${encodeURIComponent(url)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success("Rulebook deleted");
+
+      // Update local state
+      const updatedEvent = {
+        ...selectedEventForRulebooks,
+        rulebooks: selectedEventForRulebooks.rulebooks.filter(r => r.url !== url)
+      };
+      setSelectedEventForRulebooks(updatedEvent);
+      setEvents(events.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+
+    } catch (error) {
+      toast.error("Failed to delete rulebook");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#030712]" data-testid="admin-dashboard">
       {/* Header */}
@@ -804,6 +874,13 @@ const AdminDashboard = () => {
                                       <Pencil className="w-4 h-4" />
                                     </button>
                                     <button
+                                      onClick={() => handleOpenRulebookManager(event)}
+                                      className="p-2 glass hover:bg-purple-500/20 text-purple-400 transition-colors"
+                                      title="Manage Rulebooks"
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                    </button>
+                                    <button
                                       onClick={() => handleDeleteEvent(event.id)}
                                       className="p-2 glass hover:bg-red-500/20 text-red-400 transition-colors"
                                       title="Disable Event"
@@ -825,6 +902,91 @@ const AdminDashboard = () => {
           )}
         </motion.div>
       </div >
+
+      {/* Rulebook Manager Modal */}
+      {
+        showRulebookManager && selectedEventForRulebooks && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" data-testid="rulebook-manager-modal">
+            <div className="glass p-8 rounded-none max-w-lg w-full">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black">Manage Rulebooks</h2>
+                <button
+                  onClick={() => setShowRulebookManager(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+
+              <p className="text-gray-400 mb-4 text-sm">Event: <span className="text-white font-bold">{selectedEventForRulebooks.name}</span></p>
+
+              {/* Upload Form */}
+              <form onSubmit={handleUploadRulebook} className="mb-8 border-b border-white/10 pb-6">
+                <h3 className="text-lg font-bold mb-3 text-[#d946ef]">Upload New Rulebook</h3>
+                <input
+                  type="text"
+                  placeholder="Rulebook Title (e.g., Line Follower)"
+                  value={rulebookForm.title}
+                  onChange={(e) => setRulebookForm({ ...rulebookForm, title: e.target.value })}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-white/80 px-4 py-2 text-white mb-3"
+                  required
+                />
+                <div className="flex gap-2">
+                  <input
+                    id="rulebook-file"
+                    type="file"
+                    accept=".pdf"
+                    className="flex-1 text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-sm file:font-semibold file:bg-[#d946ef] file:text-white hover:file:bg-[#ec4899]"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-[#d946ef] hover:bg-[#ec4899] font-bold text-sm uppercase tracking-wider"
+                  >
+                    Upload
+                  </button>
+                </div>
+              </form>
+
+              {/* Existing Rulebooks */}
+              <div>
+                <h3 className="text-lg font-bold mb-4">Existing Rulebooks</h3>
+                {selectedEventForRulebooks.rulebooks && selectedEventForRulebooks.rulebooks.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedEventForRulebooks.rulebooks.map((rb, idx) => (
+                      <div key={idx} className="glass p-3 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-[#d946ef]" />
+                          <span className="font-medium">{rb.title}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={rb.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-400 hover:underline"
+                          >
+                            View
+                          </a>
+                          <button
+                            onClick={() => handleDeleteRulebook(rb.url)}
+                            className="text-red-400 hover:text-red-300 p-1"
+                            title="Delete"
+                          >
+                            <Trash className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic text-sm">No rulebooks uploaded yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       {/* Event Form Modal */}
       {
