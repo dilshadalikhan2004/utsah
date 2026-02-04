@@ -516,8 +516,11 @@ const AdminDashboard = () => {
     formData.append('file', file);
     formData.append('title', rulebookForm.title);
 
+    const uploadUrl = `${API_URL}/events/${selectedEventForRulebooks.id}/rulebooks`;
+    console.log("Uploading to:", uploadUrl, "Event ID:", selectedEventForRulebooks?.id);
+
     try {
-      const response = await axios.post(`${API_URL}/events/${selectedEventForRulebooks.id}/rulebooks`, formData, {
+      const response = await axios.post(uploadUrl, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
