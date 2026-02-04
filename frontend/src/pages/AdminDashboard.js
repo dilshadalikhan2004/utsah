@@ -518,7 +518,7 @@ const AdminDashboard = () => {
 
     try {
       const response = await axios.post(`${API_URL}/events/${selectedEventForRulebooks.id}/rulebooks`, formData, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       toast.success("Rulebook uploaded");
@@ -536,7 +536,8 @@ const AdminDashboard = () => {
       setRulebookForm({ title: '' });
       if (fileInput) fileInput.value = '';
     } catch (error) {
-      toast.error('Failed to upload rulebook');
+      console.error("Upload failed", error);
+      toast.error(error.response?.data?.detail || 'Failed to upload rulebook: ' + error.message);
     }
   };
 

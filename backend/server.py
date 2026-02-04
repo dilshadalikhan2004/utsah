@@ -61,17 +61,10 @@ from fastapi.middleware.gzip import GZipMiddleware
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Static Files Setup
-STATIC_DIR = ROOT_DIR / "static"
-STATIC_DIR.mkdir(exist_ok=True)
-PDF_DIR = STATIC_DIR / "pdfs"
-PDF_DIR.mkdir(parents=True, exist_ok=True)
-
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -540,6 +533,26 @@ PDF_DIR.mkdir(parents=True, exist_ok=True)
 # Mount static files
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+from bson.binary import Binary
+import base64
+
+# ... (imports)
+
+# We are switching to Database storage for files to ensure persistence across deployments
+# No more static file mounting needed
+
+@api_router.get("/files/{file_id}")
+async def get_file(file_id: str):
+    file_doc = await db.files.find_one({"id": file_id})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    return Response(
+        content=file_doc['content'],
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename={file_doc['filename']}"}
+    )
+
 @api_router.post("/events/{event_id}/rulebooks")
 async def upload_rulebook(
     event_id: str, 
@@ -555,24 +568,31 @@ async def upload_rulebook(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    # Save file with unique name in backend static dir
-    safe_filename = f"{secrets.token_hex(4)}_{title.replace(' ', '_').lower()}.pdf"
-    file_path = PDF_DIR / safe_filename
-    
     try:
         content = await file.read()
-        with open(file_path, 'wb') as f:
-            f.write(content)
-            
-        # Construct URL pointing to backend static file
-        # Use relative URL if frontend and backend are on same domain, or full URL if different
-        # Ideally, we return a full URL or a path that the frontend knows how to handle.
-        # Since frontend consumes this, let's return a path that `api.utsahfest.in` serves.
         
-        # If the backend is at api.utsahfest.in, then /static/pdfs/... is valid
+        # Limit file size to 10MB to be safe for Mongo document limit (16MB)
+        if len(content) > 10 * 1024 * 1024:
+             raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+        file_id = f"file-{secrets.token_hex(8)}"
+        
+        # Store file content in valid BSON Binary format
+        # MongoDB handles bytes objects as Binary automatically
+        await db.files.insert_one({
+            "id": file_id,
+            "filename": f"{title.replace(' ', '_')}.pdf",
+            "content": content,  # direct bytes
+            "uploaded_at": datetime.now(timezone.utc).isoformat()
+        })
+            
+        # The URL now points to our API endpoint
+        url = f"{os.getenv('BACKEND_URL', 'http://localhost:8000')}/api/files/{file_id}"
+        
         rulebook = {
             "title": title,
-            "url": f"{os.getenv('BACKEND_URL', 'http://localhost:8000')}/static/pdfs/{safe_filename}",
+            "url": url,
+            "file_id": file_id, # Keep track for deletion
             "uploaded_at": datetime.now(timezone.utc).isoformat()
         }
         
@@ -582,9 +602,11 @@ async def upload_rulebook(
         )
         
         return rulebook
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Failed to upload rulebook: {e}")
-        raise HTTPException(status_code=500, detail="Failed to save file")
+        raise HTTPException(status_code=500, detail=f"Failed to save file to database: {str(e)}")
 
 @api_router.delete("/events/{event_id}/rulebooks")
 async def delete_rulebook(
@@ -592,6 +614,14 @@ async def delete_rulebook(
     url: str = Query(...),
     admin: dict = Depends(get_admin_user)
 ):
+    # Find the rulebook first to get the file_id
+    event = await db.events.find_one({"id": event_id})
+    if not event:
+         raise HTTPException(status_code=404, detail="Event not found")
+    
+    rulebook = next((rb for rb in event.get('rulebooks', []) if rb['url'] == url), None)
+    
+    # Remove from event
     result = await db.events.update_one(
         {"id": event_id},
         {"$pull": {"rulebooks": {"url": url}}}
@@ -600,8 +630,9 @@ async def delete_rulebook(
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Rulebook not found")
         
-    # Optional: Delete file from disk
-    # We choose not to for safety, or implement carefully
+    # Clean up file from DB if possible
+    if rulebook and 'file_id' in rulebook:
+        await db.files.delete_one({"id": rulebook['file_id']})
     
     return {"message": "Rulebook deleted"}
     
