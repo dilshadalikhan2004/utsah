@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../utils/apiClient';
-import { LogOut, Calendar, Trophy, Bell, User, Pencil, Users } from 'lucide-react';
+import { LogOut, Calendar, Trophy, Bell, User, Pencil, Users, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 const StudentDashboard = () => {
@@ -330,6 +330,12 @@ const StudentDashboard = () => {
                   />
                   <h3 className="text-xl font-bold mb-2">{event.name}</h3>
                   <p className="text-gray-400 text-sm mb-4 line-clamp-2">{event.description}</p>
+
+                  {event.rulebooks && event.rulebooks.length > 0 && (
+                    <div className="absolute top-4 right-4 bg-[#d946ef]/20 p-2 rounded-full" title="Rulebook Available">
+                      <FileText className="w-4 h-4 text-[#d946ef]" />
+                    </div>
+                  )}
 
                 </motion.div>
               ))}

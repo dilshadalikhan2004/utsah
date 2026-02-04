@@ -211,19 +211,26 @@ const EventDetailsPage = () => {
             <div className="glass p-6 rounded-none mb-8">
               <h3 className="text-xl font-bold mb-4">Downloads</h3>
               <div className="flex flex-wrap gap-4">
-                {event.rulebooks.map((rb, idx) => (
-                  <a
-                    key={idx}
-                    href={rb.url}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 glass hover:bg-white/10 transition-colors rounded text-[#d946ef]"
-                  >
-                    <FileText className="w-4 h-4" />
-                    {rb.title}
-                  </a>
-                ))}
+                {event.rulebooks.map((rb, idx) => {
+                  let url = rb.url;
+                  if (url && url.startsWith('/') && !url.startsWith('http')) {
+                    const backendRoot = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                    url = `${backendRoot}${url}`;
+                  }
+                  return (
+                    <a
+                      key={idx}
+                      href={url}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-2 glass hover:bg-white/10 transition-colors rounded text-[#d946ef]"
+                    >
+                      <FileText className="w-4 h-4" />
+                      {rb.title}
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}
