@@ -213,9 +213,13 @@ const EventDetailsPage = () => {
               <div className="flex flex-wrap gap-4">
                 {event.rulebooks.map((rb, idx) => {
                   let url = rb.url;
-                  if (url && url.startsWith('/') && !url.startsWith('http')) {
-                    const backendRoot = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-                    url = `${backendRoot}${url}`;
+                  if (url && !url.startsWith('http')) {
+                    if (url.startsWith('/')) {
+                      const backendRoot = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                      url = `${backendRoot}${url}`;
+                    } else {
+                      url = `https://${url}`;
+                    }
                   }
                   return (
                     <a
@@ -247,7 +251,17 @@ const EventDetailsPage = () => {
                     rb.title.toLowerCase() === subEvent.label.toLowerCase() ||
                     rb.title.toLowerCase().includes(subEvent.label.toLowerCase())
                   );
-                  const pdfLink = uploadedRulebook ? uploadedRulebook.url : subEvent.pdf;
+                  let pdfLink = uploadedRulebook ? uploadedRulebook.url : subEvent.pdf;
+
+                  if (pdfLink && !pdfLink.startsWith('http')) {
+                    if (pdfLink.startsWith('/')) {
+                      const backendRoot = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                      pdfLink = `${backendRoot}${pdfLink}`;
+                    } else if (uploadedRulebook) {
+                      // Only auto-prefix uploaded ones, not static public folder ones
+                      pdfLink = `https://${pdfLink}`;
+                    }
+                  }
 
                   return (
                     <div key={subEvent.id} className="flex items-center justify-between p-2 hover:bg-white/5 transition-colors rounded">

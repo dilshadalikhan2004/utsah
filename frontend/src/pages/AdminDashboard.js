@@ -965,7 +965,7 @@ const AdminDashboard = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <a
-                            href={rb.url}
+                            href={rb.url.startsWith('http') ? rb.url : (rb.url.startsWith('/') ? `${process.env.REACT_APP_BACKEND_URL}${rb.url}` : `https://${rb.url}`)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-blue-400 hover:underline"
