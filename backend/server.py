@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Query, Response, Form
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -59,6 +60,14 @@ from fastapi.middleware.gzip import GZipMiddleware
 # Create the main app without a prefix
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Static Files Setup
+STATIC_DIR = ROOT_DIR / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+PDF_DIR = STATIC_DIR / "pdfs"
+PDF_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 @app.get("/health")
 async def health_check():
@@ -518,6 +527,19 @@ async def create_event(event: EventCreate, admin: dict = Depends(get_admin_user)
     
     return EventResponse(**{**event_dict, 'registration_deadline': event.registration_deadline, 'created_at': datetime.fromisoformat(event_dict['created_at'])})
 
+from fastapi.staticfiles import StaticFiles
+
+# ... (imports)
+
+# Make sure 'static' dir exists
+STATIC_DIR = ROOT_DIR / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+PDF_DIR = STATIC_DIR / "pdfs"
+PDF_DIR.mkdir(parents=True, exist_ok=True)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 @api_router.post("/events/{event_id}/rulebooks")
 async def upload_rulebook(
     event_id: str, 
@@ -533,22 +555,24 @@ async def upload_rulebook(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    # Create directory if it doesn't exist
-    pdf_dir = ROOT_DIR.parent / "frontend" / "public" / "pdfs"
-    pdf_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Save file with unique name
+    # Save file with unique name in backend static dir
     safe_filename = f"{secrets.token_hex(4)}_{title.replace(' ', '_').lower()}.pdf"
-    file_path = pdf_dir / safe_filename
+    file_path = PDF_DIR / safe_filename
     
     try:
         content = await file.read()
         with open(file_path, 'wb') as f:
             f.write(content)
             
+        # Construct URL pointing to backend static file
+        # Use relative URL if frontend and backend are on same domain, or full URL if different
+        # Ideally, we return a full URL or a path that the frontend knows how to handle.
+        # Since frontend consumes this, let's return a path that `api.utsahfest.in` serves.
+        
+        # If the backend is at api.utsahfest.in, then /static/pdfs/... is valid
         rulebook = {
             "title": title,
-            "url": f"/pdfs/{safe_filename}",
+            "url": f"{os.getenv('BACKEND_URL', 'http://localhost:8000')}/static/pdfs/{safe_filename}",
             "uploaded_at": datetime.now(timezone.utc).isoformat()
         }
         
